@@ -5,7 +5,7 @@ import csv
 from datetime import datetime
 from time import gmtime
 
-SUBREDDITS = ['tifu']
+SUBREDDITS = ['christianity', 'teaching', 'parenting']
 POST_KEYS = ['title','created_utc','score','subreddit','domain','is_self','over_18','selftext', 'id']
 CSV_KEYS = ['title','created_utc','score','subreddit','domain','is_self','over_18','selftext', 'author_name', 'id', 'a_id']
 SCRAPE_AUTHORS = True
@@ -38,10 +38,6 @@ def process_post(post):
         except:
             pass
         d[key.encode('ascii')] = val
-
-    post.replace_more_comments(limit=None,threshold=0)
-    comments = post.comments
-    flat_comments = praw.helpers.flatten_tree(comments)
 
     if SCRAPE_AUTHORS:
         try:
@@ -84,7 +80,7 @@ if __name__ == '__main__':
                 print 'scraping new posts...'
             #    posts =  [process_post(p) for p in sub.get_new(limit=1000)]
             #    ids = [p['id'] for p in posts]
-                for post in sub.get_new(limit=1000):
+                for post in sub.get_new(limit=200):
                     if post.id not in ids:
                         print i
                         print post.title
@@ -100,7 +96,7 @@ if __name__ == '__main__':
                             i+=1
 
                 print 'scraping top posts...'
-                for post in sub.get_top_from_all(limit=1000):
+                for post in sub.get_top_from_all(limit=200):
                     if post.id not in ids:
                         print i
                         print post.title
@@ -115,7 +111,7 @@ if __name__ == '__main__':
                             i += 1
 
                 print 'scraping controversial posts...'
-                for post in sub.get_controversial_from_all(limit=1000):
+                for post in sub.get_controversial_from_all(limit=200):
                     if post.id not in ids:
                         print i
                         print post.title

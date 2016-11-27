@@ -2,9 +2,8 @@
 import nltk
 import csv
 import message
-import sys
-import gensim
-import logging
+import re
+import os
 from stop_words import get_stop_words
 from nltk.tokenize import RegexpTokenizer, WhitespaceTokenizer
 
@@ -126,6 +125,10 @@ class PreProccessor:
         self.message_arr = []
         self.author_arr = []
         self.texts = []
+        self.words = []
+        self.unique_words = []
+        self.to_write = []
+        self.vocab_size = 0
         with open(input_csv, 'rb') as csvfile:
             reader = csv.DictReader(csvfile)
             id = 0
@@ -157,33 +160,77 @@ class PreProccessor:
         # here we want to build a dictionary of words
         return
 
-    def tokenize(process):
-        print("tokenizing")
+    def tokenize(self):
+        print("Tokenizing")
         tokenizer2 = RegexpTokenizer(r'\w+')
         tokenizer1 = WhitespaceTokenizer()
-        docs = process.texts
         tokens = []
-        for doc in docs:
-            raw = doc.lower()
+        for i in range(len(self.texts)):
+            raw = self.texts[i].lower()
+            #print('raw txt')
+            #print(raw)
 
-            #white space tokenize
+            # white space tokenize
             token = tokenizer1.tokenize(raw)
 
-            #extending contractions
+            # extending contractions
             for i in range(0, len(token)):
                 if token[i] in contractions.keys():
                     token[i] = contractions[str(token[i])]
+                # removing links
+                if (re.search('http', token[i])):
+                    token[i] = ''
 
             raw = " ".join(token)
-
-            #regex tokenizing
+            # regex tokenizing
             token = tokenizer2.tokenize(raw)
             for i in range(0, len(token)):
-                if token[i] == "r":
-                    print ('found')
-                    print(raw)
-                    print token
+                if token[i].isalnum() == False:
+                    token[i] = ''
+                if(token[i] not in self.unique_words):
+                    self.vocab_size += 1
+                    self.unique_words.append(token[i])
+                self.words.append(token[i])
+
             tokens.append(token)
+            raw = " ".join(token)
+            self.to_write.append(raw)
+        return tokens
+
+    def tokenize_txt(self):
+        print("Tokenizing")
+        tokenizer = RegexpTokenizer(r'\w+')
+        tokens = []
+        for i in range(len(self.texts)):
+            raw = self.texts[i].lower()
+            # print('raw txt')
+            # print(raw)
+
+            # white space tokenize
+            token = tokenizer1.tokenize(raw)
+
+            # extending contractions
+            for i in range(0, len(token)):
+                if token[i] in contractions.keys():
+                    token[i] = contractions[str(token[i])]
+                # removing links
+                if (re.search('http', token[i])):
+                    token[i] = ''
+
+            raw = " ".join(token)
+            # regex tokenizing
+            token = tokenizer2.tokenize(raw)
+            for i in range(0, len(token)):
+                if token[i].isalnum() == False:
+                    token[i] = ''
+                if (token[i] not in self.unique_words):
+                    self.vocab_size += 1
+                    self.unique_words.append(token[i])
+                self.words.append(token[i])
+
+            tokens.append(token)
+            raw = " ".join(token)
+            self.to_write.append(raw)
         return tokens
 
 
@@ -196,6 +243,70 @@ class PreProccessor:
             s_token = [i for i in token if not i in en_stop]
             stopped_tokens.append(s_token)
         return stopped_tokens
+
+    def save_txt(self, str):
+        print('Writing file')
+        txt_str = str + '.txt'
+        if(os.path.isfile(txt_str)):
+            with open (txt_str, 'a') as f:
+                for token in self.to_write:
+                    f.write(token)
+                    f.write('\n')
+        else:
+            with open(txt_str, 'w') as f:
+                for token in self.to_write:
+                    f.write(token)
+                    f.write('\n')
+
+        f.close()
+
+class PreProccessor_text:
+    """ class for pre processing"""
+
+    def __init__(self, input_txt):
+        self.input_file = input_txt
+        self.texts = []
+        self.words = []
+        self.unique_words = []
+        self.vocab_size = 0
+        f = open(input_txt, 'rb')
+        messages = f.readlines()
+        for m in messages:
+            self.texts.append(m)
+
+    def tokenize_txt(self):
+        print("Tokenizing")
+        tokenizer = RegexpTokenizer(r'\w+')
+        tokens = []
+        for i in range(len(self.texts)):
+            raw = self.texts[i].lower()
+
+            token = tokenizer.tokenize(raw)
+            for i in range(0, len(token)):
+                if token[i].isalnum() == False:
+                    token[i] = ''
+                if (token[i] not in self.unique_words):
+                    self.vocab_size += 1
+                    self.unique_words.append(token[i])
+                self.words.append(token[i])
+
+            tokens.append(token)
+        return tokens
+
+if __name__ == "__main__":
+    #mixed files
+    #newProcess = PreProccessor('reddit_showerthoughts+lifeprotips+personalfinance_.csv')
+    #newProcess = PreProccessor('reddit_askscience+writingprompts+atheism_.csv')
+    #newProcess = PreProccessor('reddit_showerthoughts+lifeprotips+personalfinance_.csv')
+    #newProcess = PreProccessor('data/reddit_theoryofreddit+randomkindness+relationships_.csv')
+    #newProcess = PreProccessor('data/reddit_christianity+teaching+parenting_.csv')
+    #newProcess = PreProccessor('data/reddit_TIFU_.csv')
+
+    #newProcess = PreProccessor('data/reddit_suicidewatch_.csv')
+    newProcess = PreProccessor('data/reddit_Depression_.csv')
+
+    newProcess.tokenize()
+    newProcess.save_txt('data/depression_content')
 
 
 
