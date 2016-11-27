@@ -2,7 +2,7 @@ from sklearn.cross_validation import train_test_split
 from gensim.models.word2vec import Word2Vec
 from sklearn.preprocessing import scale
 from sklearn.metrics import roc_curve, auc
-from sklearn.model_selection import KFold
+from sklearn.model_selection import ShuffleSplit
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.linear_model import SGDClassifier
@@ -12,22 +12,6 @@ def cleanText(corpus):
     corpus = [z.lower().replace('\n', '').split() for z in corpus]
     return corpus
 
-
-def w2v_init(reg_posts, dep_posts, n_dim):
-    # use 1 for positive sentiment, 0 for negative
-    y = np.concatenate((np.ones(len(reg_posts)), np.zeros(len(dep_posts))))
-
-    x_train, x_test, y_train, y_test = train_test_split(np.concatenate((reg_posts, dep_posts)), y, test_size=0.2)
-
-    # Do some very minor text preprocessing
-
-    x_train = cleanText(x_train)
-    x_test = cleanText(x_test)
-
-    # Initialize model and build vocab
-    reddit_w2v = Word2Vec(size=n_dim, min_count=10)
-    reddit_w2v.build_vocab(x_train)
-    return x_train, x_test, y_train, y_test, reddit_w2v
 
 #Build word vector for training set by using the average value of all word vectors in the tweet, then scale
 def buildWordVector(text, size, model):
@@ -52,14 +36,15 @@ def w2v_train_scale(n_dim, reddit_w2v, x_train, x_test):
     reddit_w2v.train(x_test)
     return train_vecs
 
-def run_logreg(train_vecs, y_train):
-    lr = SGDClassifier(loss='log', penalty='l1')
-    lr.fit(train_vecs, y_train)
-    print 'Train Accuracy: %.2f' % lr.score(train_vecs, y_test)
-    print 'Test Accuracy: %.2f'%lr.score(test_vecs, y_test)
-    return lr
+def run_logreg(train_vecs, test_vecs, y_train, y_test):
+    LR = SGDClassifier(loss='log', penalty='l1')
+    LR.fit(train_vecs, y_train)
 
-def show_graph(lr, test_vecs, y_test):
+    print 'Train Accuracy: %.2f' % LR.score(train_vecs, y_train)
+    print 'Test Accuracy: %.2f'%LR.score(test_vecs, y_test)
+    return LR
+
+def show_graph(lr, test_vecs, y_test, split):
     pred_probas = lr.predict_proba(test_vecs)[:, 1]
 
     fpr, tpr, _ = roc_curve(y_test, pred_probas)
@@ -73,10 +58,12 @@ def show_graph(lr, test_vecs, y_test):
     plt.ylabel('true positive rate')
 
     plt.show()
+    save_str = 'ROC_' + str(split) + 'png'
+    plt.savefig(save_str)
 
 if __name__ == "__main__":
 
-    print('1. fetching data')
+    print('a. fetching data')
     with open('data/depression_content.txt', 'r') as infile:
         dep_posts = infile.readlines()
 
@@ -85,26 +72,44 @@ if __name__ == "__main__":
 
     n_dim = 300
 
-    print('2. initializing')
-    x_train, x_test, y_train, y_test, reddit_w2v = w2v_init(reg_posts, dep_posts, n_dim)
+    y = np.concatenate((np.ones(len(reg_posts)), np.zeros(len(dep_posts))))
+    x = np.concatenate((reg_posts, dep_posts))
 
-    print('3. training model')
-    #Train the model over train_reviews (this may take several minutes)
-    reddit_w2v.train(x_train)
 
-    print('4. scaling')
-    train_vecs = w2v_train_scale(n_dim, reddit_w2v, x_train, x_test)
+    print('b. initializing')
+    rs = ShuffleSplit(n_splits=5, test_size=.20)
+    rs.get_n_splits(x)
+    split = 0
+    for train_index, test_index in rs.split(x):
+        print "split", split
+        x_train, x_test = x[train_index], x[test_index]
+        y_train, y_test = y[train_index], y[test_index]
 
-    #Build test tweet vectors then scale
-    test_vecs = np.concatenate([buildWordVector(z, n_dim, reddit_w2v) for z in x_test])
-    test_vecs = scale(test_vecs)
+        x_train = cleanText(x_train)
+        x_test = cleanText(x_test)
 
-    print('5. logistical regression')
-    #Use classification algorithm (i.e. Stochastic Logistic Regression) on training set, then assess model performance on test set
-    lr = run_logreg(train_vecs, y_train)
+        # Initialize model and build vocab
+        reddit_w2v = Word2Vec(size=n_dim, min_count=10)
+        reddit_w2v.build_vocab(x_train)
 
-    print('6. plotting')
-    show_graph(lr, test_vecs, y_test)
+        print('c. training model')
+        #Train the model over train_reviews (this may take several minutes)
+        reddit_w2v.train(x_train)
+
+        print('d. scaling')
+        train_vecs = w2v_train_scale(n_dim, reddit_w2v, x_train, x_test)
+
+        #Build test tweet vectors then scale
+        test_vecs = np.concatenate([buildWordVector(z, n_dim, reddit_w2v) for z in x_test])
+        test_vecs = scale(test_vecs)
+
+        print('e. logistical regression')
+        #Use classification algorithm (i.e. Stochastic Logistic Regression) on training set, then assess model performance on test set
+        lr = run_logreg(train_vecs, test_vecs, y_train, y_test)
+
+        print('f. plotting')
+        show_graph(lr, test_vecs, y_test, split)
+        split += 1
 
 
 
