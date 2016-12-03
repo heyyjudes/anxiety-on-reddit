@@ -5,7 +5,7 @@ import csv
 from datetime import datetime
 from time import gmtime
 
-SUBREDDITS = ['christianity', 'teaching', 'parenting']
+SUBREDDITS = ['panicparty', 'worldnews', 'history', 'mentalhealth', 'sports', 'askreddit']
 POST_KEYS = ['title','created_utc','score','subreddit','domain','is_self','over_18','selftext', 'id']
 CSV_KEYS = ['title','created_utc','score','subreddit','domain','is_self','over_18','selftext', 'author_name', 'id', 'a_id']
 SCRAPE_AUTHORS = True
@@ -80,7 +80,7 @@ if __name__ == '__main__':
                 print 'scraping new posts...'
             #    posts =  [process_post(p) for p in sub.get_new(limit=1000)]
             #    ids = [p['id'] for p in posts]
-                for post in sub.get_new(limit=200):
+                for post in sub.get_new(limit=100):
                     if post.id not in ids:
                         print i
                         print post.title
@@ -96,7 +96,7 @@ if __name__ == '__main__':
                             i+=1
 
                 print 'scraping top posts...'
-                for post in sub.get_top_from_all(limit=200):
+                for post in sub.get_top_from_all(limit=100):
                     if post.id not in ids:
                         print i
                         print post.title
@@ -111,7 +111,7 @@ if __name__ == '__main__':
                             i += 1
 
                 print 'scraping controversial posts...'
-                for post in sub.get_controversial_from_all(limit=200):
+                for post in sub.get_controversial_from_all(limit=100):
                     if post.id not in ids:
                         print i
                         print post.title

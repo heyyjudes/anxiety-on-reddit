@@ -57,7 +57,7 @@ from pre_process import PreProccessor, PreProccessor_text
 #
 # words = read_data(filename)
 
-depProcess = PreProccessor_text('data/depression_content.txt')
+depProcess = PreProccessor_text('data/anxiety_content.txt')
 depProcess.tokenize_txt()
 words = depProcess.words
 vocabulary_size = depProcess.vocab_size

@@ -41,8 +41,8 @@ def run_logreg(train_vecs, test_vecs, y_train, y_test):
     LR = SGDClassifier(loss='log', penalty='l1')
     LR.fit(train_vecs, y_train)
 
-    print 'Train Accuracy: %.2f' % LR.score(train_vecs, y_train)
-    print 'Test Accuracy: %.2f'%LR.score(test_vecs, y_test)
+    print 'Train Accuracy: %.3f' % LR.score(train_vecs, y_train)
+    print 'Test Accuracy: %.3f'%LR.score(test_vecs, y_test)
     return LR
 
 def show_graph(lr, test_vecs, y_test, split):
@@ -65,7 +65,7 @@ def show_graph(lr, test_vecs, y_test, split):
 if __name__ == "__main__":
 
     print('a. fetching data')
-    with open('data/depression_content.txt', 'r') as infile:
+    with open('data/anxiety_content.txt', 'r') as infile:
         dep_posts = infile.readlines()
 
     with open('data/mixed_content.txt', 'r') as infile:
@@ -85,6 +85,7 @@ if __name__ == "__main__":
         print "split", split
         x_train, x_test = x[train_index], x[test_index]
         y_train, y_test = y[train_index], y[test_index]
+        print y_test.shape
 
         x_train = cleanText(x_train)
         x_test = cleanText(x_test)
@@ -104,18 +105,16 @@ if __name__ == "__main__":
         test_vecs = np.concatenate([buildWordVector(z, n_dim, reddit_w2v) for z in x_test])
         test_vecs = scale(test_vecs)
 
-        # print('e. logistical regression')
-        # #Use classification algorithm (i.e. Stochastic Logistic Regression) on training set, then assess model performance on test set
-        # lr = run_logreg(train_vecs, test_vecs, y_train, y_test)
-        #
-        #
-        #
-        # print('f. plotting')
-        # show_graph(lr, test_vecs, y_test, split)
-        # split += 1
+        print('e. logistical regression')
+        #Use classification algorithm (i.e. Stochastic Logistic Regression) on training set, then assess model performance on test set
+        lr = run_logreg(train_vecs, test_vecs, y_train, y_test)
+
+        print('f. plotting')
+        show_graph(lr, test_vecs, y_test, split)
+        split += 1
 
         print('Simple NN')
-        simpleNN(train_vecs, test_vecs, y_train, y_test, 0.01, 10, 100)
+        simpleNN(train_vecs, test_vecs, y_train, y_test, 0.01, 100, 100)
 
 
 

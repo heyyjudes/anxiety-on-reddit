@@ -293,6 +293,37 @@ class PreProccessor_text:
             tokens.append(token)
         return tokens
 
+    def train_test_split(self, text_size):
+        length = len(self.texts)
+        cutoff = int(length*text_size)
+
+        test_str = 'test_set.txt'
+        with open(test_str, 'w') as f:
+            for i in range(0, cutoff):
+                #print(self.texts[i])
+                if len(self.texts[i]) > 3:
+                    f.write(self.texts[i])
+
+                else:
+                    print('empty')
+                    print(len(self.texts[i]))
+                    print(self.texts[i])
+
+        f.close()
+
+        train_str = 'train_set.txt'
+        with open(train_str, 'w') as f:
+            for i in range(cutoff, length):
+                if len(self.texts[i]) > 3:
+                    f.write(self.texts[i])
+                else:
+                    print('empty')
+                    print(len(self.texts[i]))
+                    print(self.texts[i])
+
+        f.close()
+
+
 if __name__ == "__main__":
     #mixed files
     #newProcess = PreProccessor('reddit_showerthoughts+lifeprotips+personalfinance_.csv')
@@ -302,11 +333,17 @@ if __name__ == "__main__":
     #newProcess = PreProccessor('data/reddit_christianity+teaching+parenting_.csv')
     #newProcess = PreProccessor('data/reddit_TIFU_.csv')
 
-    #newProcess = PreProccessor('data/reddit_suicidewatch_.csv')
-    newProcess = PreProccessor('data/reddit_Depression_.csv')
+    #newProcess = PreProccessor('data/reddit_jokes+writing+fitness_.csv')
 
-    newProcess.tokenize()
-    newProcess.save_txt('data/depression_content')
+    #newProcess = PreProccessor('data/reddit_suicidewatch_.csv')
+    #newProcess = PreProccessor('data/reddit_Depression_.csv')
+
+    #newProcess = PreProccessor('data/reddit_panicparty+worldnews+history+mentalhealth+sports+askreddit_.csv')
+    #newProcess.tokenize()
+    #newProcess.save_txt('data/unlabeled_content')
+
+    splitProcess = PreProccessor_text('data/anxietysub_content.txt')
+    splitProcess.train_test_split(0.25)
 
 
 
