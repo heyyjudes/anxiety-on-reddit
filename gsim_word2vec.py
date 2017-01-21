@@ -5,9 +5,9 @@ from sklearn.metrics import roc_curve, auc
 from sklearn.model_selection import ShuffleSplit
 import matplotlib.pyplot as plt
 import numpy as np
-from NNet import simpleNN
+#from NNet import simpleNN
 from sklearn.linear_model import SGDClassifier
-
+from svm import train_svm
 
 def cleanText(corpus):
     corpus = [z.lower().replace('\n', '').split() for z in corpus]
@@ -109,12 +109,13 @@ if __name__ == "__main__":
         #Use classification algorithm (i.e. Stochastic Logistic Regression) on training set, then assess model performance on test set
         lr = run_logreg(train_vecs, test_vecs, y_train, y_test)
 
-        print('f. plotting')
-        show_graph(lr, test_vecs, y_test, split)
+        print('f. svm')
+        #show_graph(lr, test_vecs, y_test, split)
+        train_svm(train_vecs, test_vecs, y_train, y_test)
         split += 1
 
         print('Simple NN')
-        simpleNN(train_vecs, test_vecs, y_train, y_test, 0.01, 100, 100)
+        #simpleNN(train_vecs, test_vecs, y_train, y_test, 0.01, 100, 100)
 
 
 

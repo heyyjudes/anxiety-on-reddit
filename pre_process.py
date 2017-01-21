@@ -6,7 +6,7 @@ import re
 import os
 from stop_words import get_stop_words
 from nltk.tokenize import RegexpTokenizer, WhitespaceTokenizer
-
+POST_KEYS = ['title','created_utc','score','subreddit','domain','is_self','over_18','selftext']
 contractions = {
     "ain't": "am not",
     "aren't": "are not",
@@ -135,9 +135,12 @@ class PreProccessor:
             for row in reader:
                 new_message = message.RedMessage(id, row['title'], row['selftext'], row['author_name'], row['subreddit'], row['created_utc'])
                 self.message_arr.append(new_message)
-                self.texts.append(new_message.body)
-                self.texts.append(new_message.title)
+                combined_post = new_message.title + " " + new_message.body
+                self.texts.append(combined_post)
+                # self.texts.append(new_message.body)
+                # self.texts.append(new_message.title)
                 id += 1
+            print "Total posts", id
 
     def filter_message(self):
         #filter by length
@@ -323,27 +326,49 @@ class PreProccessor_text:
 
         f.close()
 
+def merge_csv(input_csv1, input_csv2):
+    ids=[]
+    added = 0
+    with open(input_csv1, 'r+') as csvfile1:
+        reader = csv.DictReader(csvfile1)
+        for row in reader:
+            ids.append(row['created_utc'])
+
+        with open(input_csv2, 'r') as csvfile2:
+            reader = csv.DictReader(csvfile2)
+            writer = csv.DictWriter(csvfile1, POST_KEYS)
+            for row in reader:
+                if row['created_utc'] not in ids:
+                    writer.writerow(row)
+                    print added
+                    added +=1
+                else:
+                    print "match"
+
+
 
 if __name__ == "__main__":
     #mixed files
-    #newProcess = PreProccessor('reddit_showerthoughts+lifeprotips+personalfinance_.csv')
-    #newProcess = PreProccessor('reddit_askscience+writingprompts+atheism_.csv')
-    #newProcess = PreProccessor('reddit_showerthoughts+lifeprotips+personalfinance_.csv')
+    #newProcess = PreProccessor('data/reddit_askscience+writingprompts+atheism_.csv')
+    #newProcess = PreProccessor('data/reddit_showerthoughts+lifeprotips+personalfinance_.csv')
     #newProcess = PreProccessor('data/reddit_theoryofreddit+randomkindness+relationships_.csv')
     #newProcess = PreProccessor('data/reddit_christianity+teaching+parenting_.csv')
-    #newProcess = PreProccessor('data/reddit_TIFU_.csv')
-
     #newProcess = PreProccessor('data/reddit_jokes+writing+fitness_.csv')
-
+    #newProcess = PreProccessor('data/reddit_talesfromretail+talesfromtechsupport+talesfromcallcenters_.csv')
     #newProcess = PreProccessor('data/reddit_suicidewatch_.csv')
-    #newProcess = PreProccessor('data/reddit_Depression_.csv')
-
+    #newProcess = PreProccessor('data/reddit_panicparty+socialanxiety_.csv')
+    #newProcess = PreProccessor('data/reddit_books+askdocs+legaladvice_.csv')
+    newProcess = PreProccessor('data/reddit_frugal+youshouldknow+nostupidquestions_.csv')
     #newProcess = PreProccessor('data/reddit_panicparty+worldnews+history+mentalhealth+sports+askreddit_.csv')
-    #newProcess.tokenize()
-    #newProcess.save_txt('data/unlabeled_content')
+    newProcess.tokenize()
+    newProcess.save_txt('data/mixed_content')
 
-    splitProcess = PreProccessor_text('data/anxietysub_content.txt')
-    splitProcess.train_test_split(0.25)
+    #splitProcess = PreProccessor_text('data/allsub_content.txt')
+    #splitProcess.train_test_split(0.25)
+
+    # newProcess = PreProccessor('data/reddit_anxiety_.csv')
+    # newProcess.tokenize()
+    # newProcess.save_txt('data/anxiety_content')
 
 
 

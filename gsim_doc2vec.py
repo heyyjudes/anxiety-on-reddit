@@ -110,7 +110,7 @@ def show_graph(lr, test_vecs, y_test, split):
 if __name__ == "__main__":
 
     print('a. fetching data')
-    with open('data/depression_content.txt', 'r') as infile:
+    with open('data/anxietysub_content.txt', 'r') as infile:
         dep_posts = infile.readlines()
 
     with open('data/mixed_content.txt', 'r') as infile:

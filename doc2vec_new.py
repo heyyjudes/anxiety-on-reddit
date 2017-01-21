@@ -15,8 +15,8 @@ from random import shuffle
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_curve, auc
 
-from NNet import simpleNN
-
+#from NNet import simpleNN
+from svm import train_svm
 def show_graph(lr, test_vecs, y_test):
     pred_probas = lr.predict_proba(test_vecs)[:, 1]
 
@@ -41,10 +41,10 @@ class LabeledLineSentence(object):
         self.train_pos_size = 0
         self.test_pos_size = 0
         self.test_neg_size = 0
-        #self.train_size = 9800
-        self.train_size = 1980
-        #self.test_size = 2400
-        self.test_size = 660
+        self.train_size = 9800
+        #self.train_size = 368
+        self.test_size = 2400
+        #self.test_size = 125
 
         flipped = {}
 
@@ -96,8 +96,8 @@ class LabeledLineSentence(object):
 
 
 if __name__ == "__main__":
-    sources = {'data/anx_test_set.txt': 'TEST_NEG', 'data/mixed_test_set.txt': 'TEST_POS', 'data/anx_train_set.txt': 'TRAIN_NEG',
-               'data/mixed_train_set.txt': 'TRAIN_POS', 'data/unlabeled_content.txt': 'TRAIN_UNS'}
+    sources = {'data/anx_test_set.txt': 'TEST_NEG', 'data/all_test_set.txt': 'TEST_POS', 'data/anx_train_set.txt': 'TRAIN_NEG',
+               'data/all_train_set.txt': 'TRAIN_POS', 'data/unlabeled_content.txt': 'TRAIN_UNS'}
 
     print('1. labeling')
     sentences = LabeledLineSentence(sources)
@@ -112,12 +112,12 @@ if __name__ == "__main__":
         model.train(sentences.sentences_perm())
         print epoch
 
-    print('3. saving model')
-    model.save('./reddit.d2v')
-
-
-    print('4. loading model')
-    model = Doc2Vec.load('./reddit.d2v')
+    # print('3. saving model')
+    # model.save('./reddit.d2v')
+    #
+    #
+    # print('4. loading model')
+    # model = Doc2Vec.load('./reddit.d2v')
 
     train_arrays = numpy.zeros((sentences.train_size, 300))
     train_labels = numpy.zeros(sentences.train_size)
@@ -144,11 +144,13 @@ if __name__ == "__main__":
     print('5. logistic regression')
     classifier = LogisticRegression()
     classifier.fit(train_arrays, train_labels)
+    print 'Test Accuracy: %.2f' % classifier.score(test_arrays, test_labels)
+
+    train_svm(train_arrays, test_arrays, train_labels, test_labels)
 
     print('f. plotting')
-    show_graph(classifier, test_arrays, test_labels)
+    #show_graph(classifier, test_arrays, test_labels)
 
     print('5. simple neural network')
-    simpleNN(train_arrays, test_arrays, train_labels, test_labels, 0.01, 25, 100)
+    #simpleNN(train_arrays, test_arrays, train_labels, test_labels, 0.01, 25, 100)
 
-    print 'Test Accuracy: %.2f'%classifier.score(test_arrays, test_labels)
