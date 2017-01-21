@@ -5,7 +5,7 @@ from sklearn.metrics import roc_curve, auc
 from sklearn.model_selection import ShuffleSplit
 import matplotlib.pyplot as plt
 import numpy as np
-#from NNet import simpleNN
+from NNet import simpleNN
 from sklearn.linear_model import SGDClassifier
 from svm import train_svm
 
@@ -78,14 +78,13 @@ if __name__ == "__main__":
 
 
     print('b. initializing')
-    rs = ShuffleSplit(n_splits=5, test_size=.20)
+    rs = ShuffleSplit(n_splits=10, test_size=.10)
     rs.get_n_splits(x)
     split = 0
     for train_index, test_index in rs.split(x):
         print "split", split
         x_train, x_test = x[train_index], x[test_index]
         y_train, y_test = y[train_index], y[test_index]
-        print y_test.shape
 
         x_train = cleanText(x_train)
         x_test = cleanText(x_test)
@@ -115,7 +114,7 @@ if __name__ == "__main__":
         split += 1
 
         print('Simple NN')
-        #simpleNN(train_vecs, test_vecs, y_train, y_test, 0.01, 100, 100)
+        simpleNN(train_vecs, test_vecs, y_train, y_test, 0.01, 100, 100)
 
 
 
