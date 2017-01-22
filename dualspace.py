@@ -1,12 +1,12 @@
 from sklearn.cross_validation import train_test_split
 from gensim.models.word2vec import Word2Vec
-from sklearn.preprocessing import scale
 from sklearn.metrics import roc_curve, auc
 from sklearn.model_selection import ShuffleSplit
 import matplotlib.pyplot as plt
 import numpy as np
 from NNet import simpleNN
 from sklearn.linear_model import SGDClassifier
+from svm import train_svm
 
 
 def cleanText(corpus):
@@ -65,7 +65,7 @@ def show_graph(lr, test_vecs, y_test, split):
 if __name__ == "__main__":
 
     print('a. fetching data')
-    with open('data/anxietysub_content.txt', 'r') as infile:
+    with open('data/anxiety_content.txt', 'r') as infile:
         dep_posts = infile.readlines()
         print(len(dep_posts))
 
@@ -169,10 +169,10 @@ if __name__ == "__main__":
         lr = run_logreg(train_vecs, test_vecs, y_train, y_test)
 
         print('Simple NN')
-        simpleNN(train_vecs, test_vecs, y_train, y_test, 0.01, 25, 100)
+        simpleNN(train_vecs, test_vecs, y_train, y_test, 0.01, 100, 100)
 
-        print('f. plotting')
-        show_graph(lr, test_vecs, y_test, split)
+        print('svm')
+
 
 
 

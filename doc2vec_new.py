@@ -2,12 +2,11 @@
 from gensim import utils
 from gensim.models.doc2vec import LabeledSentence, DocvecsArray
 from gensim.models import Doc2Vec
-
+from sklearn.model_selection import ShuffleSplit
 # numpy
-import numpy
+import numpy as np
 
 import matplotlib.pyplot as plt
-
 # random
 from random import shuffle
 
@@ -15,7 +14,7 @@ from random import shuffle
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_curve, auc
 
-#from NNet import simpleNN
+from NNet import simpleNN
 from svm import train_svm
 def show_graph(lr, test_vecs, y_test):
     pred_probas = lr.predict_proba(test_vecs)[:, 1]
@@ -41,9 +40,9 @@ class LabeledLineSentence(object):
         self.train_pos_size = 0
         self.test_pos_size = 0
         self.test_neg_size = 0
-        self.train_size = 9800
+        self.train_size = 10000
         #self.train_size = 368
-        self.test_size = 2400
+        self.test_size = 1000
         #self.test_size = 125
 
         flipped = {}
@@ -96,61 +95,95 @@ class LabeledLineSentence(object):
 
 
 if __name__ == "__main__":
-    sources = {'data/anx_test_set.txt': 'TEST_NEG', 'data/all_test_set.txt': 'TEST_POS', 'data/anx_train_set.txt': 'TRAIN_NEG',
-               'data/all_train_set.txt': 'TRAIN_POS', 'data/unlabeled_content.txt': 'TRAIN_UNS'}
+    print('a. fetching data')
+    with open('data/anxiety_content.txt', 'r') as infile:
+        dep_posts = infile.readlines()
 
-    print('1. labeling')
-    sentences = LabeledLineSentence(sources)
+    with open('data/mixed_content.txt', 'r') as infile:
+        reg_posts = infile.readlines()
 
-    model = Doc2Vec(min_count=1, window=10, size=300, sample=1e-4, negative=5, workers=8)
+    y = np.concatenate((np.ones(len(reg_posts)), np.zeros(len(dep_posts))))
+    x = np.concatenate((reg_posts, dep_posts))
 
-    output_sen = sentences.to_array()
-    model.build_vocab(output_sen)
+    print('b. initializing')
+    rs = ShuffleSplit(n_splits=10, test_size=.10)
+    rs.get_n_splits(x)
+    split = 0
+    for train_index, test_index in rs.split(x):
+        print "split", split
+        x_train, x_test = x[train_index], x[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+        with open('data/anx_test_set.txt', 'w') as anx:
+            with open('data/all_test_set.txt', 'w') as all:
+                for i in range(0, len(x_test)):
+                    if y_test[i] == 0:
+                        anx.write(x_test[i])
+                    else:
+                        all.write(x_test[i])
+        with open('data/anx_train_set.txt', 'w') as anx:
+            with open('data/all_train_set.txt', 'w') as all:
+                for i in range(0, len(x_train)):
+                    if y_train[i] == 0:
+                        anx.write(x_train[i])
+                    else:
+                        all.write(x_train[i])
 
-    print('2. training doc2vec')
-    for epoch in range(10):
-        model.train(sentences.sentences_perm())
-        print epoch
+        sources = {'data/anx_test_set.txt': 'TEST_NEG', 'data/all_test_set.txt': 'TEST_POS', 'data/anx_train_set.txt': 'TRAIN_NEG',
+                   'data/all_train_set.txt': 'TRAIN_POS'}
 
-    # print('3. saving model')
-    # model.save('./reddit.d2v')
-    #
-    #
-    # print('4. loading model')
-    # model = Doc2Vec.load('./reddit.d2v')
+        print('1. labeling')
+        sentences = LabeledLineSentence(sources)
 
-    train_arrays = numpy.zeros((sentences.train_size, 300))
-    train_labels = numpy.zeros(sentences.train_size)
+        model = Doc2Vec(min_count=1, window=10, size=300, sample=1e-4, negative=5, workers=8)
 
-    for i in range(sentences.train_size/2):
-        prefix_train_neg = 'TRAIN_NEG_' + str(i)
-        prefix_train_pos = 'TRAIN_POS_' + str(i)
-        train_arrays[i] = model.docvecs[prefix_train_pos]
-        train_arrays[sentences.train_size/2 + i] = model.docvecs[prefix_train_neg]
-        train_labels[i] = 1
-        train_labels[sentences.train_size/2 + i] = 0
+        output_sen = sentences.to_array()
+        model.build_vocab(output_sen)
 
-    test_arrays = numpy.zeros((sentences.test_size, 300))
-    test_labels = numpy.zeros(sentences.test_size)
+        print('2. training doc2vec')
+        for epoch in range(10):
+            model.train(sentences.sentences_perm())
+            print epoch
 
-    for i in range(sentences.test_size/2):
-        prefix_test_pos = 'TEST_POS_' + str(i)
-        prefix_test_neg = 'TEST_NEG_' + str(i)
-        test_arrays[i] = model.docvecs[prefix_test_pos]
-        test_arrays[sentences.test_size/2 + i] = model.docvecs[prefix_test_neg]
-        test_labels[i] = 1
-        test_labels[sentences.test_size/2 + i] = 0
+        # print('3. saving model')
+        # model.save('./reddit.d2v')
+        #
+        #
+        # print('4. loading model')
+        # model = Doc2Vec.load('./reddit.d2v')
 
-    print('5. logistic regression')
-    classifier = LogisticRegression()
-    classifier.fit(train_arrays, train_labels)
-    print 'Test Accuracy: %.2f' % classifier.score(test_arrays, test_labels)
+        train_arrays = np.zeros((sentences.train_size, 300))
+        train_labels = np.zeros(sentences.train_size)
 
-    train_svm(train_arrays, test_arrays, train_labels, test_labels)
+        for i in range(sentences.train_size/2):
+            prefix_train_neg = 'TRAIN_NEG_' + str(i)
+            prefix_train_pos = 'TRAIN_POS_' + str(i)
+            train_arrays[i] = model.docvecs[prefix_train_pos]
+            train_arrays[sentences.train_size/2 + i] = model.docvecs[prefix_train_neg]
+            train_labels[i] = 1
+            train_labels[sentences.train_size/2 + i] = 0
 
-    print('f. plotting')
-    #show_graph(classifier, test_arrays, test_labels)
+        test_arrays = np.zeros((sentences.test_size, 300))
+        test_labels = np.zeros(sentences.test_size)
 
-    print('5. simple neural network')
-    #simpleNN(train_arrays, test_arrays, train_labels, test_labels, 0.01, 25, 100)
+        for i in range(sentences.test_size/2):
+            prefix_test_pos = 'TEST_POS_' + str(i)
+            prefix_test_neg = 'TEST_NEG_' + str(i)
+            test_arrays[i] = model.docvecs[prefix_test_pos]
+            test_arrays[sentences.test_size/2 + i] = model.docvecs[prefix_test_neg]
+            test_labels[i] = 1
+            test_labels[sentences.test_size/2 + i] = 0
+
+        print('5. logistic regression')
+        classifier = LogisticRegression()
+        classifier.fit(train_arrays, train_labels)
+        print 'Train Accuracy: %.3f' % classifier.score(train_arrays, train_labels)
+        print 'Test Accuracy: %.3f' % classifier.score(test_arrays, test_labels)
+
+        print('SVM')
+        train_svm(train_arrays, test_arrays, train_labels, test_labels)
+
+        print('Simple neural network')
+        simpleNN(train_arrays, test_arrays, train_labels, test_labels, 0.01, 50, 100)
+
+
 
