@@ -14,8 +14,10 @@ from random import shuffle
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_curve, auc
 
-from NNet import simpleNN
+#from NNet import simpleNN
 from svm import train_svm
+from LIWC_classify import split_array, parse_vec
+
 def show_graph(lr, test_vecs, y_test):
     pred_probas = lr.predict_proba(test_vecs)[:, 1]
 
@@ -94,6 +96,72 @@ class LabeledLineSentence(object):
                 return sent.words
 
 
+def build_d2v_vecs(split, train_index, test_index, x, y):
+    x_train, x_test = x[train_index], x[test_index]
+    y_train, y_test = y[train_index], y[test_index]
+    with open('data/anx_test_set.txt', 'w') as anx:
+        with open('data/all_test_set.txt', 'w') as all:
+            for i in range(0, len(x_test)):
+                if y_test[i] == 0:
+                    anx.write(x_test[i])
+                else:
+                    all.write(x_test[i])
+    with open('data/anx_train_set.txt', 'w') as anx:
+        with open('data/all_train_set.txt', 'w') as all:
+            for i in range(0, len(x_train)):
+                if y_train[i] == 0:
+                    anx.write(x_train[i])
+                else:
+                    all.write(x_train[i])
+
+    sources = {'data/anx_test_set.txt': 'TEST_NEG', 'data/all_test_set.txt': 'TEST_POS',
+               'data/anx_train_set.txt': 'TRAIN_NEG',
+               'data/all_train_set.txt': 'TRAIN_POS'}
+
+    print('1. labeling')
+    sentences = LabeledLineSentence(sources)
+
+    model = Doc2Vec(min_count=1, window=10, size=300, sample=1e-4, negative=5, workers=8)
+
+    output_sen = sentences.to_array()
+    model.build_vocab(output_sen)
+
+    # print('2. training doc2vec')
+    # for epoch in range(10):
+    #     model.train(sentences.sentences_perm())
+    #     print epoch
+    #
+    # print('3. saving model')
+    # model.save(str(split) + '_reddit.d2v')
+    model = Doc2Vec.load('models/' + str(split) + '_reddit.d2v')
+    train_size = 20000
+    test_size = 2000
+
+    train_arrays = np.zeros((train_size, 300))
+    train_labels = np.zeros(train_size)
+
+    for i in range(train_size/2):
+        prefix_train_neg = 'TRAIN_NEG_' + str(i)
+        prefix_train_pos = 'TRAIN_POS_' + str(i)
+        train_arrays[i] = model.docvecs[prefix_train_pos]
+        train_arrays[train_size/2 + i] = model.docvecs[prefix_train_neg]
+        train_labels[i] = 1
+        train_labels[train_size/2 + i] = 0
+
+    test_arrays = np.zeros((test_size, 300))
+    test_labels = np.zeros(test_size)
+
+    for i in range(test_size/2):
+        prefix_test_pos = 'TEST_POS_' + str(i)
+        prefix_test_neg = 'TEST_NEG_' + str(i)
+        test_arrays[i] = model.docvecs[prefix_test_pos]
+        test_arrays[test_size/2 + i] = model.docvecs[prefix_test_neg]
+        test_labels[i] = 1
+        test_labels[test_size/2 + i] = 0
+
+    return train_arrays, test_arrays, train_labels, test_labels
+
+
 if __name__ == "__main__":
     print('a. fetching data')
     with open('data/anxiety_content.txt', 'r') as infile:
@@ -102,76 +170,61 @@ if __name__ == "__main__":
     with open('data/mixed_content.txt', 'r') as infile:
         reg_posts = infile.readlines()
 
+    # new_arr = []
+    # for post in reg_posts:
+    #     if len(post) > 5:
+    #         new_arr.append(post)
+    # reg_posts = new_arr
+    #
+    # new_arr = []
+    # for post in dep_posts:
+    #     if len(post) > 5:
+    #         new_arr.append(post)
+    # dep_posts = new_arr
+
+
+
+    # with open('data/liwc_anxious.txt', 'r') as infile:
+    #     anx_liwc_posts = infile.readlines()
+    #
+    # with open('data/liwc_mixed.txt', 'r') as infile:
+    #     reg_liwc_posts = infile.readlines()
+    #
+    # reg_liwc_posts = split_array(reg_liwc_posts[0])
+    # anx_liwc_posts = split_array(anx_liwc_posts[0])
+    #
+    # y_liwc = np.concatenate((np.ones(len(reg_liwc_posts)), np.zeros(len(anx_liwc_posts))))
+    # x_liwc = np.concatenate((reg_liwc_posts, anx_liwc_posts))
+
     y = np.concatenate((np.ones(len(reg_posts)), np.zeros(len(dep_posts))))
     x = np.concatenate((reg_posts, dep_posts))
 
+    # x = x[:len(x_liwc)]
+    # y = y[:len(y_liwc)]
+
     print('b. initializing')
-    rs = ShuffleSplit(n_splits=10, test_size=.10)
+    rs = ShuffleSplit(n_splits=10, test_size=.10, random_state=0)
     rs.get_n_splits(x)
     split = 0
     for train_index, test_index in rs.split(x):
         print "split", split
-        x_train, x_test = x[train_index], x[test_index]
-        y_train, y_test = y[train_index], y[test_index]
-        with open('data/anx_test_set.txt', 'w') as anx:
-            with open('data/all_test_set.txt', 'w') as all:
-                for i in range(0, len(x_test)):
-                    if y_test[i] == 0:
-                        anx.write(x_test[i])
-                    else:
-                        all.write(x_test[i])
-        with open('data/anx_train_set.txt', 'w') as anx:
-            with open('data/all_train_set.txt', 'w') as all:
-                for i in range(0, len(x_train)):
-                    if y_train[i] == 0:
-                        anx.write(x_train[i])
-                    else:
-                        all.write(x_train[i])
 
-        sources = {'data/anx_test_set.txt': 'TEST_NEG', 'data/all_test_set.txt': 'TEST_POS', 'data/anx_train_set.txt': 'TRAIN_NEG',
-                   'data/all_train_set.txt': 'TRAIN_POS'}
 
-        print('1. labeling')
-        sentences = LabeledLineSentence(sources)
+        train_arrays, test_arrays, train_labels, test_labels = build_d2v_vecs(split, train_index, test_index, x, y)
 
-        model = Doc2Vec(min_count=1, window=10, size=300, sample=1e-4, negative=5, workers=8)
+        #addingliwc
 
-        output_sen = sentences.to_array()
-        model.build_vocab(output_sen)
-
-        print('2. training doc2vec')
-        for epoch in range(10):
-            model.train(sentences.sentences_perm())
-            print epoch
-
-        # print('3. saving model')
-        # model.save('./reddit.d2v')
+        # x_train_liwc, x_test_liwc = x_liwc[train_index], x_liwc[test_index]
+        # y_train_liwc, y_test_liwc = y_liwc[train_index], y_liwc[test_index]
         #
+        # train_vecs_liwc = np.concatenate([parse_vec(z) for z in x_train_liwc])
+        # test_vecs_liwc = np.concatenate([parse_vec(z) for z in x_test_liwc])
         #
-        # print('4. loading model')
-        # model = Doc2Vec.load('./reddit.d2v')
-
-        train_arrays = np.zeros((sentences.train_size, 300))
-        train_labels = np.zeros(sentences.train_size)
-
-        for i in range(sentences.train_size/2):
-            prefix_train_neg = 'TRAIN_NEG_' + str(i)
-            prefix_train_pos = 'TRAIN_POS_' + str(i)
-            train_arrays[i] = model.docvecs[prefix_train_pos]
-            train_arrays[sentences.train_size/2 + i] = model.docvecs[prefix_train_neg]
-            train_labels[i] = 1
-            train_labels[sentences.train_size/2 + i] = 0
-
-        test_arrays = np.zeros((sentences.test_size, 300))
-        test_labels = np.zeros(sentences.test_size)
-
-        for i in range(sentences.test_size/2):
-            prefix_test_pos = 'TEST_POS_' + str(i)
-            prefix_test_neg = 'TEST_NEG_' + str(i)
-            test_arrays[i] = model.docvecs[prefix_test_pos]
-            test_arrays[sentences.test_size/2 + i] = model.docvecs[prefix_test_neg]
-            test_labels[i] = 1
-            test_labels[sentences.test_size/2 + i] = 0
+        # train_vecs_liwc = train_vecs_liwc[:len(train_arrays)]
+        # test_vecs_liwc = test_vecs_liwc[:len(test_arrays)]
+        #
+        # train_arrays = np.concatenate((train_arrays, train_vecs_liwc), axis=1)
+        # test_arrays = np.concatenate((test_arrays, test_vecs_liwc), axis=1)
 
         print('5. logistic regression')
         classifier = LogisticRegression()
@@ -183,7 +236,8 @@ if __name__ == "__main__":
         train_svm(train_arrays, test_arrays, train_labels, test_labels)
 
         print('Simple neural network')
-        simpleNN(train_arrays, test_arrays, train_labels, test_labels, 0.01, 50, 100)
+        #simpleNN(train_arrays, test_arrays, train_labels, test_labels, 0.01, 100, 100)
 
+        split +=1
 
 
