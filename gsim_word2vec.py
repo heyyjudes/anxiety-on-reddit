@@ -8,7 +8,7 @@ import numpy as np
 from NNet import simpleNN
 from sklearn.linear_model import SGDClassifier
 from svm import train_svm
-
+from LIWC_classify import split_array, parse_vec
 def cleanText(corpus):
     corpus = [z.lower().replace('\n', '').split() for z in corpus]
     return corpus
@@ -62,6 +62,27 @@ def show_graph(lr, test_vecs, y_test, split):
     save_str = 'ROC_' + str(split) + 'png'
     plt.savefig(save_str)
 
+
+def build_model_w2v(x_train, labelstr):
+    reddit_w2v = Word2Vec(size=n_dim, min_count=10)
+    reddit_w2v.build_vocab(x_train)
+    reddit_w2v.train(x_train)
+    reddit_w2v.save(labelstr)
+    return reddit_w2v
+
+    return reddit_w2v
+
+def build_vecs_w2v(split, x_train, x_test):
+    reddit_w2v = Word2Vec.load('models/' + str(split) + '_model.w2v')
+    n_dim = 300
+    train_vecs = w2v_train_scale(n_dim, reddit_w2v, x_train, x_test)
+    # Build test tweet vectors then scale
+    test_vecs = np.concatenate([buildWordVector(z, n_dim, reddit_w2v) for z in x_test])
+    test_vecs = scale(test_vecs)
+
+    return train_vecs, test_vecs
+
+
 if __name__ == "__main__":
 
     print('a. fetching data')
@@ -71,14 +92,32 @@ if __name__ == "__main__":
     with open('data/mixed_content.txt', 'r') as infile:
         reg_posts = infile.readlines()
 
+    new_arr = []
+    for post in dep_posts:
+        if len(post) > 5:
+            new_arr.append(post)
+    dep_posts = new_arr
+
     n_dim = 300
 
     y = np.concatenate((np.ones(len(reg_posts)), np.zeros(len(dep_posts))))
     x = np.concatenate((reg_posts, dep_posts))
 
 
+    with open('data/liwc_anxious.txt', 'r') as infile:
+        anx_liwc_posts = infile.readlines()
+
+    with open('data/liwc_mixed.txt', 'r') as infile:
+        reg_liwc_posts = infile.readlines()
+
+    reg_liwc_posts = split_array(reg_liwc_posts[0])
+    anx_liwc_posts = split_array(anx_liwc_posts[0])
+
+    y_liwc = np.concatenate((np.ones(len(reg_liwc_posts)), np.zeros(len(anx_liwc_posts))))
+    x_liwc = np.concatenate((reg_liwc_posts, anx_liwc_posts))
+
     print('b. initializing')
-    rs = ShuffleSplit(n_splits=10, test_size=.10)
+    rs = ShuffleSplit(n_splits=10, test_size=.10, random_state=0)
     rs.get_n_splits(x)
     split = 0
     for train_index, test_index in rs.split(x):
@@ -90,19 +129,21 @@ if __name__ == "__main__":
         x_test = cleanText(x_test)
 
         # Initialize model and build vocab
-        reddit_w2v = Word2Vec(size=n_dim, min_count=10)
-        reddit_w2v.build_vocab(x_train)
+        print('c. building models')
 
-        print('c. training model')
-        #Train the model over train_reviews (this may take several minutes)
-        reddit_w2v.train(x_train)
+        # reddit_w2v = build_model_w2v(x_train, str(split) + '_model.w2v')
 
         print('d. scaling')
-        train_vecs = w2v_train_scale(n_dim, reddit_w2v, x_train, x_test)
+        train_vecs, test_vecs = build_vecs_w2v(split, x_train, x_test)
 
-        #Build test tweet vectors then scale
-        test_vecs = np.concatenate([buildWordVector(z, n_dim, reddit_w2v) for z in x_test])
-        test_vecs = scale(test_vecs)
+        x_train_liwc, x_test_liwc = x_liwc[train_index], x_liwc[test_index]
+        y_train_liwc, y_test_liwc = y_liwc[train_index], y_liwc[test_index]
+
+        train_vecs_liwc = np.concatenate([parse_vec(z) for z in x_train_liwc])
+        test_vecs_liwc = np.concatenate([parse_vec(z) for z in x_test_liwc])
+
+        train_vecs = np.concatenate((train_vecs, train_vecs_liwc), axis=1)
+        test_vecs = np.concatenate((test_vecs, test_vecs_liwc), axis=1)
 
         print('e. logistical regression')
         #Use classification algorithm (i.e. Stochastic Logistic Regression) on training set, then assess model performance on test set
@@ -111,10 +152,11 @@ if __name__ == "__main__":
         print('f. svm')
         #show_graph(lr, test_vecs, y_test, split)
         train_svm(train_vecs, test_vecs, y_train, y_test)
-        split += 1
+
 
         print('Simple NN')
         simpleNN(train_vecs, test_vecs, y_train, y_test, 0.01, 100, 100)
+        split += 1
 
 
 
