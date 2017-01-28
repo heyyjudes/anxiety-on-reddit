@@ -22,7 +22,6 @@ def create_model(process, mod_label):
     process.doc_term_matrix()
     if os.path.exists(mod_label):
         ldamodel = gensim.models.ldamodel.LdaModel.load(mod_label)
-        ldamodel.update(process.corpus)
         print "loading prexisting lda"
     else:
         print "creating new lda"
@@ -118,21 +117,21 @@ if __name__ == "__main__":
     y = np.concatenate((np.ones(len(mixed_posts)), np.zeros(len(anxiety_posts))))
     x = np.concatenate((mixed_posts, anxiety_posts))
 
-    # DOC2Vec uncomment
-    # with open('data/anxiety_content.txt', 'r') as infile:
-    #     dep_posts = infile.readlines()
-    #
-    # with open('data/mixed_content.txt', 'r') as infile:
-    #     reg_posts = infile.readlines()
-    #
-    # new_arr = []
-    # for post in dep_posts:
-    #     if len(post) > 5:
-    #         new_arr.append(post)
-    # dep_posts = new_arr
-    #
-    # y_doc = np.concatenate((np.ones(len(reg_posts)), np.zeros(len(dep_posts))))
-    # x_doc = np.concatenate((reg_posts, dep_posts))
+    #DOC2Vec uncomment
+    with open('data/anxiety_content.txt', 'r') as infile:
+        dep_posts = infile.readlines()
+
+    with open('data/mixed_content.txt', 'r') as infile:
+        reg_posts = infile.readlines()
+
+    new_arr = []
+    for post in dep_posts:
+        if len(post) > 5:
+            new_arr.append(post)
+    dep_posts = new_arr
+
+    y_doc = np.concatenate((np.ones(len(reg_posts)), np.zeros(len(dep_posts))))
+    x_doc = np.concatenate((reg_posts, dep_posts))
 
     print('b. initializing')
     rs = ShuffleSplit(n_splits=10, test_size=.10, random_state=0)
@@ -148,11 +147,11 @@ if __name__ == "__main__":
               else:
                   mixedProcess.train_tokens.append(x_train[i])
 
-        anx_model = create_model(anxietyProcess, 'models/'+ str(split) + '_anxiety.lda')
-        mixed_model = create_model(mixedProcess, 'models/'+ str(split) + '_allsub.lda')
+        anx_model = create_model(anxietyProcess, 'models/'+ str(split) + '__anxiety.lda')
+        mixed_model = create_model(mixedProcess, 'models/'+ str(split) + '__allsub.lda')
 
-        x_train_liwc, x_test_liwc = x_liwc[train_index], x_liwc[test_index]
-        y_train_liwc, y_test_liwc = y_liwc[train_index], y_liwc[test_index]
+        # x_train_liwc, x_test_liwc = x_liwc[train_index], x_liwc[test_index]
+        # y_train_liwc, y_test_liwc = y_liwc[train_index], y_liwc[test_index]
 
         print('d. scaling')
         train_vecs = np.concatenate([buildWordVector(z, anxietyProcess.dictionary, mixedProcess.dictionary, anx_model, mixed_model) for z in x_train])
@@ -160,12 +159,12 @@ if __name__ == "__main__":
         # Build test tweet vectors then scale
         test_vecs = np.concatenate([buildWordVector(z, anxietyProcess.dictionary, mixedProcess.dictionary, anx_model, mixed_model) for z in x_test])
         test_vecs = scale(test_vecs)
-
-
-        print "building training set"
-        train_vecs_liwc = np.concatenate([parse_vec(z) for z in x_train_liwc])
-        print "building test set"
-        test_vecs_liwc = np.concatenate([parse_vec(z) for z in x_test_liwc])
+        #
+        #
+        # print "building training set"
+        # train_vecs_liwc = np.concatenate([parse_vec(z) for z in x_train_liwc])
+        # print "building test set"
+        # test_vecs_liwc = np.concatenate([parse_vec(z) for z in x_test_liwc])
 
         #print('d1. adding word2vec')
         # w_train_vecs, w_test_vecs = build_vecs_w2v(split, x_train, x_test)
@@ -174,23 +173,25 @@ if __name__ == "__main__":
         # test_vecs = np.concatenate((test_vecs, w_test_vecs), axis=1)
 
         #print('d1. adding word2vec')
-        #d_train_vecs, d_test_vecs, y_train, y_test= build_d2v_vecs(split,train_index, test_index, x_doc, y_doc)
-        # train_vecs = train_vecs[:len(d_train_vecs)]
-        # test_vecs = test_vecs[:len(d_test_vecs)]
+        d_train_vecs, d_test_vecs, y_train, y_test= build_d2v_vecs(split,train_index, test_index, x_doc, y_doc)
+        train_vecs = train_vecs[:len(d_train_vecs)]
+        test_vecs = test_vecs[:len(d_test_vecs)]
 
         print train_vecs.shape
         print test_vecs.shape
-        print train_vecs_liwc.shape
+        print d_train_vecs.shape
+        print d_test_vecs.shape
+        #print train_vecs_liwc.shape
         # print train_vecs.shape
-        print test_vecs_liwc.shape
+        #print test_vecs_liwc.shape
         # print test_vecs.shape
-        train_vecs = np.concatenate((train_vecs, train_vecs_liwc), axis=1)
-        test_vecs = np.concatenate((test_vecs, test_vecs_liwc), axis=1)
+        #train_vecs = np.concatenate((train_vecs, train_vecs_liwc), axis=1)
+        #test_vecs = np.concatenate((test_vecs, test_vecs_liwc), axis=1)
 
 
 
-        # train_vecs = np.concatenate((train_vecs, train_vecs_liwc), axis=1)
-        # test_vecs = np.concatenate((test_vecs, test_vecs_liwc), axis=1)
+        train_vecs = np.concatenate((train_vecs, d_train_vecs), axis=1)
+        test_vecs = np.concatenate((test_vecs, d_test_vecs), axis=1)
 
 
         print('e. logistical regression')
