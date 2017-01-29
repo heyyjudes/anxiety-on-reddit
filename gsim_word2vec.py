@@ -5,10 +5,10 @@ from sklearn.metrics import roc_curve, auc
 from sklearn.model_selection import ShuffleSplit
 import matplotlib.pyplot as plt
 import numpy as np
-from NNet import simpleNN
+#from NNet import simpleNN
 from sklearn.linear_model import SGDClassifier
 from svm import train_svm
-from LIWC_classify import split_array, parse_vec
+from liwc_2015 import build_train_test, read_liwc_csv
 def cleanText(corpus):
     corpus = [z.lower().replace('\n', '').split() for z in corpus]
     return corpus
@@ -103,18 +103,11 @@ if __name__ == "__main__":
     y = np.concatenate((np.ones(len(reg_posts)), np.zeros(len(dep_posts))))
     x = np.concatenate((reg_posts, dep_posts))
 
+    labels, anx_liwc = read_liwc_csv('data//anxious_liwc.csv')
+    labels, mixed_liwc = read_liwc_csv('data//mixed_liwc.csv')
 
-    with open('data/liwc_anxious.txt', 'r') as infile:
-        anx_liwc_posts = infile.readlines()
-
-    with open('data/liwc_mixed.txt', 'r') as infile:
-        reg_liwc_posts = infile.readlines()
-
-    reg_liwc_posts = split_array(reg_liwc_posts[0])
-    anx_liwc_posts = split_array(anx_liwc_posts[0])
-
-    y_liwc = np.concatenate((np.ones(len(reg_liwc_posts)), np.zeros(len(anx_liwc_posts))))
-    x_liwc = np.concatenate((reg_liwc_posts, anx_liwc_posts))
+    y_liwc = np.concatenate((np.ones(len(mixed_liwc)), np.zeros(len(anx_liwc))))
+    x_liwc = np.concatenate((mixed_liwc, anx_liwc))
 
     print('b. initializing')
     rs = ShuffleSplit(n_splits=10, test_size=.10, random_state=0)
@@ -136,17 +129,10 @@ if __name__ == "__main__":
         print('d. scaling')
         train_vecs, test_vecs = build_vecs_w2v(split, x_train, x_test)
 
-        x_train_liwc, x_test_liwc = x_liwc[train_index], x_liwc[test_index]
-        y_train_liwc, y_test_liwc = y_liwc[train_index], y_liwc[test_index]
+        x_train_liwc, x_test_liwc, y_train_liwc, y_test_liwc = build_train_test(x_liwc, y_liwc, train_index, test_index)        #Use classification algorithm (i.e. Stochastic Logistic Regression) on training set, then assess model performance on test set
 
-        train_vecs_liwc = np.concatenate([parse_vec(z) for z in x_train_liwc])
-        test_vecs_liwc = np.concatenate([parse_vec(z) for z in x_test_liwc])
-
-        train_vecs = np.concatenate((train_vecs, train_vecs_liwc), axis=1)
-        test_vecs = np.concatenate((test_vecs, test_vecs_liwc), axis=1)
-
-        print('e. logistical regression')
-        #Use classification algorithm (i.e. Stochastic Logistic Regression) on training set, then assess model performance on test set
+        train_vecs = np.concatenate((train_vecs, x_train_liwc), axis = 1)
+        test_vecs = np.concatenate((test_vecs, x_test_liwc), axis = 1)
         lr = run_logreg(train_vecs, test_vecs, y_train, y_test)
 
         print('f. svm')
@@ -155,7 +141,7 @@ if __name__ == "__main__":
 
 
         print('Simple NN')
-        simpleNN(train_vecs, test_vecs, y_train, y_test, 0.01, 100, 100)
+        #simpleNN(train_vecs, test_vecs, y_train, y_test, 0.01, 100, 100)
         split += 1
 
 
