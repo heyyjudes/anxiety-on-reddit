@@ -45,7 +45,7 @@ def twtt4(input_str):
 if __name__ == "__main__":
     input_path = "data/tweets.csv"
     output_file = "data/unlabeled_tweet.txt"
-    num_tweets = 25000
+    num_tweets = 50000
 
     my_tweets = []
     with open(input_path, 'rb') as f:
@@ -53,7 +53,9 @@ if __name__ == "__main__":
         for row in reader:
             my_tweets.append(row)
 
-    new_tweets = my_tweets[:num_tweets] + my_tweets[800000:800000+num_tweets]
+    pos = my_tweets[:num_tweets]
+    neg = my_tweets[800000:800000+num_tweets]
+    new_tweets = pos + neg
 
 
     out_f = open(output_file, 'w')
