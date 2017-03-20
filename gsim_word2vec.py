@@ -127,8 +127,8 @@ if __name__ == "__main__":
             new_arr.append(post)
     reg_posts = new_arr
 
-    dep_posts = dep_posts[:1000]
-    reg_posts = reg_posts[:1000]
+    dep_posts = dep_posts
+    reg_posts = reg_posts
 
     y = np.concatenate((np.ones(len(reg_posts)), np.zeros(len(dep_posts))))
     x = np.concatenate((reg_posts, dep_posts))
