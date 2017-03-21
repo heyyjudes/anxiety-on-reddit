@@ -40,9 +40,10 @@ class D2V(feat.Feature):
         #            'data/anx_train_set.txt': 'TRAIN_NEG',
         #            'data/all_train_set.txt': 'TRAIN_POS', 'data/unlabeled_tweet.txt': 'TRAIN_UNLAB'}
 
-        sources_train = {'data/anx_train_set.txt': 'TRAIN_NEG',
-                   'data/all_train_set.txt': 'TRAIN_POS'}
-        #           'data/unlabeled_tweet.txt': 'TRAIN_UNLAB'}
+        sources_train = {
+            #'data/anx_train_set.txt': 'TRAIN_NEG',
+             #      'data/all_train_set.txt': 'TRAIN_POS'}
+                   'data/unlabeled_tweet.txt': 'TRAIN_UNLAB'}
 
         sources_test = {'data/anx_test_set.txt': 'TEST_NEG', 'data/all_test_set.txt': 'TEST_POS'}
 
@@ -68,18 +69,24 @@ class D2V(feat.Feature):
             model.save(model_str)
 
 
-        train_arrays = np.zeros((train_pos_size + train_neg_size, self.dim))
-        train_labels = np.zeros(train_pos_size + train_neg_size)
+        train_arrays = []
+        for sent in x_train:
+            train_arrays.append(model.infer_vector(sent.split(" ")))
+        train_arrays = np.asarray(train_arrays)
+        train_labels = y_train
 
-        for i in range(0, train_pos_size):
-            prefix_train_pos = 'TRAIN_POS_' + str(i)
-            train_arrays[i] = model.docvecs[prefix_train_pos]
-            train_labels[i] = 1
-
-        for i in range(0, train_neg_size):
-            prefix_train_neg = 'TRAIN_NEG_' + str(i)
-            train_arrays[train_pos_size + i] = model.docvecs[prefix_train_neg]
-            train_labels[train_pos_size + i] = 0
+        # train_arrays = np.zeros((train_pos_size + train_neg_size, self.dim))
+        # train_labels = np.zeros(train_pos_size + train_neg_size)
+        #
+        # for i in range(0, train_pos_size):
+        #     prefix_train_pos = 'TRAIN_POS_' + str(i)
+        #     train_arrays[i] = model.docvecs[prefix_train_pos]
+        #     train_labels[i] = 1
+        #
+        # for i in range(0, train_neg_size):
+        #     prefix_train_neg = 'TRAIN_NEG_' + str(i)
+        #     train_arrays[train_pos_size + i] = model.docvecs[prefix_train_neg]
+        #     train_labels[train_pos_size + i] = 0
 
         test_arrays = []
         for sent in x_test:
@@ -160,6 +167,9 @@ if __name__ == "__main__":
 
     with open('data/mixed_content.txt', 'r') as infile:
         reg_posts = infile.readlines()
+
+    with open('data/unlabeled_tweet.txt', 'r') as infile:
+        unlabeled_posts = infile.readlines()
 
     new_arr = []
     for post in reg_posts:
