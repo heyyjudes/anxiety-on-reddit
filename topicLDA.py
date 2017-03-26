@@ -1,85 +1,226 @@
-import sys
 import numpy as np
 import gensim
-from preprocess import PreProcessorLDA
+import os
+
 from sklearn.preprocessing import scale
-from sklearn.metrics import roc_curve, auc
 from sklearn.model_selection import ShuffleSplit
-import matplotlib.pyplot as plt
-from sklearn.linear_model import SGDClassifier
-from svm import train_svm
-from NNet import simpleNN
+from nltk.stem.porter import PorterStemmer
+from stop_words import get_stop_words
 
+import feat
+import svm
+import NNet
+import logreg
 
-def prep_model(process):
-    process.tokenize_LDA()
-    process.remove_stop_LDA()
-    process.stem_LDA()
+class LDA(feat.Feature):
+    def __init__(self, name):
+        self.diff_train = False
+        self.train_targets = None
+        self.dict_pos = None
+        self.dict_neg = None
+        self.corpus_pos = None
+        self.corpus_neg = None
+        self.dict_uni = None
+        self.corpus_uni = None
+        self.model_pos = None
+        self.model_neg = None
+        feat.Feature.__init__(self, name)
 
-def create_model(process, mod_label):
-    process.doc_term_matrix()
-    ldamodel = gensim.models.ldamodel.LdaModel(process.corpus, num_topics=10, id2word=process.dictionary, passes=20)
-    ldamodel.save(mod_label)
-    ldamodel = gensim.models.LdaModel.load(mod_label)
-    print(ldamodel.print_topics(num_topics=10, num_words=10))
-    return ldamodel
+        return
 
-def buildWordVector(text, dic_neg, dic_pos, model_neg, model_pos):
-    size = 10
-    pos_vec = np.zeros(size).reshape((1, size))
-    neg_vec = np.zeros(size).reshape((1, size))
-    query_neg = dic_neg.doc2bow(text)
-    query_pos = dic_pos.doc2bow(text)
+    def add_text(self, train, train_labels, test, corpus=None):
+        '''
+        add text to feature model
+        :param corpus: corpus txt of words with punctuation removed to build model
+        :param train: training array with punctuation removed
+        :param test: test array of posts with punctuation removed
+        :return:
+        '''
+        self.train = train
+        self.train_targets = train_labels
+        self.test = test
+        if corpus != None:
+            self.corpus = corpus
+            self.diff_train = True
+        else:
+            self.corpus = train
+            self.diff_train = False
+        return
 
-    neg_tup = model_neg[query_neg]
-    pos_tup = model_pos[query_pos]
-    for (topic, prob) in neg_tup:
-        neg_vec[0][topic] = prob
+    def clean_text(self):
 
-    for(topic, prob) in pos_tup:
-        pos_vec[0][topic] = prob
+        self.train = [z.lower().replace('\n', '').split() for z in self.train]
+        self.test = [z.lower().replace('\n', '').split() for z in self.test]
 
-    vec = np.concatenate((pos_vec, neg_vec), axis=1)
-    return vec
+        if self.diff_train == True:
+            self.corpus = [z.lower().replace('\n', '').split() for z in self.corpus]
+        else:
+            self.corpus = self.train
 
-def run_logreg(train_vecs, test_vecs, y_train, y_test):
-    LR = SGDClassifier(loss='log', penalty='l1')
-    LR.fit(train_vecs, y_train)
+        return
 
-    print 'Train Accuracy: %.3f' % LR.score(train_vecs, y_train)
-    print 'Test Accuracy: %.3f'%LR.score(test_vecs, y_test)
-    return LR
+    def remove_stop(self):
+        en_stop = get_stop_words('en')
+        en_stop.append('just')
+        temp = []
+        for token in self.test:
+            s_token = [i for i in token if not i in en_stop]
+            temp.append(s_token)
+        self.corpus = temp
 
-def show_graph(lr, test_vecs, y_test, split):
-    pred_probas = lr.predict_proba(test_vecs)[:, 1]
+        temp = []
+        for token in self.train:
+            s_token = [i for i in token if not i in en_stop]
+            temp.append(s_token)
+        self.corpus = temp
 
-    fpr, tpr, _ = roc_curve(y_test, pred_probas)
-    roc_auc = auc(fpr, tpr)
-    plt.plot(fpr, tpr, label='area = %.2f' % roc_auc)
-    plt.plot([0, 1], [0, 1], 'k--')
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.legend(loc='lower right')
-    plt.xlabel('false positive rate')
-    plt.ylabel('true positive rate')
+        if self.diff_train == True:
+            temp = []
+            for token in self.corpus:
+                s_token = [i for i in token if not i in en_stop]
+                temp.append(s_token)
+            self.corpus = temp
+        else:
+            self.corpus = self.train
+        return
 
-    plt.show()
-    save_str = 'ROC_' + str(split) + 'png'
-    plt.savefig(save_str)
+    def stem_LDA(self):
+        p_stemmer = PorterStemmer()
+
+        temp = []
+        for s_token in self.test:
+            text = [p_stemmer.stem(s) for s in s_token]
+            temp.append(text)
+        self.test = temp
+
+        temp = []
+        for s_token in self.train:
+            text = [p_stemmer.stem(s) for s in s_token]
+            temp.append(text)
+        self.train = temp
+
+        if self.diff_train == True:
+            temp = []
+            for s_token in self.corpus:
+                text = [p_stemmer.stem(s) for s in s_token]
+                temp.append(text)
+            self.corpus = temp
+        else:
+            self.corpus = self.train
+        return
+
+    def doc_term_matrix(self):
+        # construct document term matrix
+        # assign frequencies
+        # case 1: our corpus is just our training examples
+        # we build two topic modeling spaces
+        if self.diff_train == False:
+            neg_tokens = []
+            pos_tokens = []
+            for i in range(0, len(self.train)):
+                #here is the negative class
+                if self.train_targets[i] == 0:
+                    neg_tokens.append(self.train[i])
+                else:
+                    pos_tokens.append(self.train[i])
+
+            self.dict_pos = gensim.corpora.Dictionary(pos_tokens)
+            self.dict_neg = gensim.corpora.Dictionary(neg_tokens)
+
+            # converted to bag of words
+            self.corpus_pos = [self.dict_pos.doc2bow(text) for text in pos_tokens]
+            self.corpus_neg = [self.dict_neg.doc2bow(text) for text in neg_tokens]
+
+        #case 2: we want to use unified model
+        else:
+            self.dict_uni = gensim.corpora.Dictionary(self.corpus)
+            self.corpus_uni = [self.dict_uni.doc2bow(text) for text in self.corpus]
+
+        return
+
+    def prep_model(self):
+        model_name = self.name
+        print "cleaning"
+        self.clean_text()
+        print "removing stop"
+        self.remove_stop()
+        print "building model"
+        print "stemming"
+        self.stem_LDA()
+        print "matrix"
+        self.doc_term_matrix()
+        print "creating model"
+
+        if self.diff_train == False:
+            if os.path.isfile('pos_' + model_name) and os.path.isfile('neg_' + model_name):
+                self.model_pos = gensim.models.ldamodel.LdaModel.load('pos_' + model_name)
+                self.model_neg = gensim.models.ldamodel.LdaModel.load('neg_' + model_name)
+            else:
+                self.create_model(model_name)
+        else:
+            if os.path.isfile('uni_' + model_name):
+                self.model = gensim.models.ldamodel.LdaModel.load('uni_' + model_name)
+
+            else:
+                self.create_model(model_name)
+        return
+
+    def create_model(self, mod_label):
+        if self.diff_train == False:
+            self.model_pos = gensim.models.ldamodel.LdaModel(self.corpus_pos, num_topics=10, id2word=self.dict_pos, passes=20)
+            self.model_pos.save('pos_' + mod_label)
+            self.model_neg = gensim.models.ldamodel.LdaModel(self.corpus_neg, num_topics=10, id2word=self.dict_neg, passes=20)
+            self.model_neg.save('neg_' + mod_label)
+        else:
+            self.model = gensim.models.ldamodel.LdaModel(self.corpus_uni, num_topics=20, id2word=self.dict_uni,
+                                                             passes=20)
+            self.model.save('uni_' + mod_label)
+        return
+
+    def buildWordVector(self, text):
+        size = 10
+        # same training as model so we have two spaces
+        if self.diff_train == False:
+            pos_vec = np.zeros(size).reshape((1, size))
+            neg_vec = np.zeros(size).reshape((1, size))
+            query_neg = self.dict_neg.doc2bow(text)
+            query_pos = self.dict_pos.doc2bow(text)
+
+            neg_tup = self.model_neg[query_neg]
+            pos_tup = self.model_pos[query_pos]
+            for (topic, prob) in neg_tup:
+                neg_vec[0][topic] = prob
+
+            for(topic, prob) in pos_tup:
+                pos_vec[0][topic] = prob
+
+            vec = np.concatenate((pos_vec, neg_vec), axis=1)
+
+        else:
+            vec = np.zeros(size*2).reshape((1, size*2))
+            query_vec = self.dict_uni.doc2bow(text)
+            vec_tup = self.model[query_vec]
+
+            for (topic, prob) in vec_tup:
+                vec[0][topic] = prob
+        return vec
 
 
 if __name__ == "__main__":
-    #sys.path.extend(['C:\\Users\\heyyj\\PycharmProjects\\Reddit'])
-    anxietyProcess = PreProcessorLDA('data/anxiety_content.txt')
-    prep_model(anxietyProcess)
-    anxiety_posts = anxietyProcess.stemmed_tokens
 
-    mixedProcess = PreProcessorLDA('data/mixed_content.txt')
-    prep_model(mixedProcess)
-    mixed_posts = mixedProcess.stemmed_tokens
+    print('a. fetching data')
+    with open('data/anxiety_content.txt', 'r') as infile:
+        anxiety_posts = infile.readlines()
+
+    with open('data/mixed_content.txt', 'r') as infile:
+        mixed_posts = infile.readlines()
+
+    with open('data/unlabeled_tweet.txt', 'r') as infile:
+        unlabeled_posts = infile.readlines()
 
     y = np.concatenate((np.ones(len(mixed_posts)), np.zeros(len(anxiety_posts))))
     x = np.concatenate((mixed_posts, anxiety_posts))
+
 
     print('b. initializing')
     rs = ShuffleSplit(n_splits=10, test_size=.10)
@@ -89,36 +230,34 @@ if __name__ == "__main__":
         print "split", split
         x_train, x_test = x[train_index], x[test_index]
         y_train, y_test = y[train_index], y[test_index]
-        for i in range(0, len(x_train)):
-              if y_train[i] == 0:
-                  anxietyProcess.train_tokens.append(x_train[i])
-              else:
-                  mixedProcess.train_tokens.append(x_train[i])
 
-        anx_model = create_model(anxietyProcess, 'anxiety.lda')
-        mixed_model = create_model(mixedProcess, 'allsub.lda')
+        # x_train = x_train[:100]
+        # x_test = x_test[:100]
+        # y_train = y_train[:100]
+        # y_test = y_test[:100]
+
+        lda_feat = LDA(str(split) + '_twt.lda')
+        lda_feat.add_text(x_train, y_train, x_test, corpus=unlabeled_posts)
+        lda_feat.prep_model()
 
         print('d. scaling')
-        train_vecs = np.concatenate([buildWordVector(z, anxietyProcess.dictionary, mixedProcess.dictionary, anx_model, mixed_model) for z in x_train])
+        train_vecs = np.concatenate([lda_feat.buildWordVector(z) for z in lda_feat.train])
         train_vecs = scale(train_vecs)
         # Build test tweet vectors then scale
-        test_vecs = np.concatenate([buildWordVector(z, anxietyProcess.dictionary, mixedProcess.dictionary, anx_model, mixed_model) for z in x_test])
+        test_vecs = np.concatenate([lda_feat.buildWordVector(z) for z in lda_feat.test])
         test_vecs = scale(test_vecs)
 
         print('e. logistical regression')
         # Use classification algorithm (i.e. Stochastic Logistic Regression) on training set, then assess model performance on test set
-        lr = run_logreg(train_vecs, test_vecs, y_train, y_test)
+        logreg.run_logreg(train_vecs, test_vecs, y_train, y_test)
 
         print('f. svm ')
-        train_svm(train_vecs, test_vecs, y_train, y_test)
+        svm.train_svm(train_vecs, test_vecs, y_train, y_test)
 
         print('Simple NN')
-        simpleNN(train_vecs, test_vecs, y_train, y_test, 0.01, 100, 100)
+        NNet.simpleNN(train_vecs, test_vecs, y_train, y_test, 0.01, 100, 100)
 
-        #print('g. Neural Network')
-        #show_graph(lr, test_vecs, y_test, split)
         split += 1
 
     print('done')
 
-    # tokenize document into atomic elements
