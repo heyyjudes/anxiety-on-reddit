@@ -41,9 +41,9 @@ class D2V(feat.Feature):
         #            'data/all_train_set.txt': 'TRAIN_POS', 'data/unlabeled_tweet.txt': 'TRAIN_UNLAB'}
 
         sources_train = {
-            #'data/anx_train_set.txt': 'TRAIN_NEG',
-             #      'data/all_train_set.txt': 'TRAIN_POS'}
-                   'data/unlabeled_tweet.txt': 'TRAIN_UNLAB'}
+            'data/anx_train_set.txt': 'TRAIN_NEG',
+                   'data/all_train_set.txt': 'TRAIN_POS'}
+            #       'data/unlabeled_tweet.txt': 'TRAIN_UNLAB'}
 
         sources_test = {'data/anx_test_set.txt': 'TEST_NEG', 'data/all_test_set.txt': 'TEST_POS'}
 
@@ -196,7 +196,7 @@ if __name__ == "__main__":
         x_train, x_test = x[train_index], x[test_index]
         y_train, y_test = y[train_index], y[test_index]
 
-        new_doc = D2V('w2v_' + str(split), 300)
+        new_doc = D2V('d2v_train_alt' + str(split), 300)
         train_arrays, test_arrays, train_labels, test_labels = new_doc.build_d2v_vecs(x_train, x_test, y_train, y_test)
 
         print('Logreg')

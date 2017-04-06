@@ -237,7 +237,7 @@ if __name__ == "__main__":
         # y_test = y_test[:100]
 
         lda_feat = LDA('twt.lda')
-        lda_feat.add_text(x_train, y_train, x_test)
+        lda_feat.add_text(x_train, y_train, x_test, corpus=unlabeled_posts)
         lda_feat.prep_model()
 
         print('d. scaling')
