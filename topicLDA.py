@@ -133,8 +133,9 @@ class LDA(feat.Feature):
 
         #case 2: we want to use unified model
         else:
-            self.dict_uni = gensim.corpora.Dictionary(self.corpus)
-            self.corpus_uni = [self.dict_uni.doc2bow(text) for text in self.corpus]
+            comb = self.train + self.corpus
+            self.dict_uni = gensim.corpora.Dictionary(comb)
+            self.corpus_uni = [self.dict_uni.doc2bow(text) for text in comb]
 
         return
 
