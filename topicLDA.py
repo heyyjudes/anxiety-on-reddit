@@ -200,10 +200,12 @@ class LDA(feat.Feature):
         else:
             vec = np.zeros(size*2).reshape((1, size*2))
             query_vec = self.dict_uni.doc2bow(text)
-            vec_tup = self.model[query_vec]
-
-            for (topic, prob) in vec_tup:
-                vec[0][topic] = prob
+            try:
+                vec_tup = self.model[query_vec]
+                for (topic, prob) in vec_tup:
+                    vec[0][topic] = prob
+            except:
+                pass
         return vec
 
 

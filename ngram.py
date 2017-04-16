@@ -1,12 +1,9 @@
 import numpy as np
-import os
 import feat
 import nltk
 import NNet
 import svm
 import logreg
-from gensim.models.word2vec import Word2Vec
-from sklearn.preprocessing import scale
 from sklearn.model_selection import ShuffleSplit
 
 class GramModel():
@@ -17,7 +14,7 @@ class GramModel():
         self.unigram = None
         self.length = 0
 
-class Gram(feat.Feature):
+class Bigram(feat.Feature):
 
     def __init__(self, name):
         self.pos_model = None
@@ -132,9 +129,6 @@ if __name__ == "__main__":
     y = np.concatenate((np.ones(len(reg_posts)), np.zeros(len(dep_posts))))
     x = np.concatenate((reg_posts, dep_posts))
 
-
-    #y = np.concatenate((y[:50], y[-50:]))
-    #x = np.concatenate((x[:50], x[-50:]))
     brown_corp = nltk.corpus.brown
     unlabeled_corp = build_corp("unlabeled_tweet.txt")
 
@@ -156,7 +150,7 @@ if __name__ == "__main__":
                     else:
                         all.write(x_train[i])
 
-        new_ngram = Gram('reg')
+        new_ngram = Bigram('reg')
         print "building corpus"
         pos_corp = build_corp("all_train_set.txt")
         neg_corp = build_corp("anx_test_set.txt")
@@ -166,7 +160,7 @@ if __name__ == "__main__":
         print "calculating train"
 
         train_vecs = new_ngram.build_prob_vecs(x_train)
-        
+
         print "calculating test"
 
         test_vecs = new_ngram.build_prob_vecs(x_test)

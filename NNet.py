@@ -13,7 +13,7 @@ from __future__ import print_function
 import tensorflow as tf
 import numpy as np
 
-
+from sklearn.metrics import precision_score, recall_score
 
 
 # Create model
@@ -77,7 +77,7 @@ def simpleNN(train_x, test_x, train_y, test_y, learn_rate, epochs, batch):
     pred = multilayer_perceptron(x, weights, biases)
 
     # Define loss and optimizer
-    cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(pred, y))
+    cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y))
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
     # Initializing the variables
@@ -109,7 +109,18 @@ def simpleNN(train_x, test_x, train_y, test_y, learn_rate, epochs, batch):
         print("Optimization Finished!")
 
         # Test model
-        correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
+        test_pred = tf.argmax(pred, 1)
+        test_label = tf.argmax(y, 1)
+        correct_prediction = tf.equal(test_pred, test_label)
+        #correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
         # Calculate accuracy
+
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
-        print("Accuracy:", accuracy.eval({x: test_x, y: new_test_y}))
+        #print("Accuracy:", accuracy.eval({x: test_x, y: new_test_y}))
+
+        val_accuracy, y_pred = sess.run([accuracy, test_pred], feed_dict={x: test_x, y: new_test_y})
+        print ("validation accuracy:  %.3f", val_accuracy)
+        y_true = np.argmax(new_test_y, 1)
+        print("Precision  %.3f", precision_score(y_true, y_pred))
+        print("Recall  %.3f", recall_score(y_true, y_pred))
+
