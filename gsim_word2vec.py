@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import csv
 import feat
 import NNet
 import svm
@@ -10,11 +11,16 @@ from sklearn.model_selection import ShuffleSplit
 
 class W2V(feat.Feature):
 
-    def __init__(self, name, dim):
+    def __init__(self, name, dim, liwc):
         self.train = []
         self.test = []
         self.corpus = []
         self.dim = dim
+        if liwc:
+            self.build_liwc = True
+        else:
+            self.build_liwc = False
+        self.liwc = None
         feat.Feature.__init__(self, name)
         return
 
@@ -30,6 +36,30 @@ class W2V(feat.Feature):
         self.train = train
         self.test = test
         return
+
+    def load_liwc(self, pos_liwc, neg_liwc):
+        '''
+        input file names to be read as liwc vectors
+        :param pos_liwc:
+        :param neg_liwc:
+        :return:
+        '''
+        pos_liwc = self.read_liwc_csv(pos_liwc)
+        neg_liwc = self.read_liwc_csv(neg_liwc)
+        self.liwc = np.concatenate((pos_liwc, neg_liwc))
+
+    def read_liwc_csv(self, input_file):
+        with open(input_file) as csvfile:
+            reader = csv.DictReader(csvfile)
+            output_arr = []
+            for row in reader:
+                del row['Filename']
+                del row['Segment']
+                results = []
+                for val in row.values():
+                    results.append(float(val))
+                output_arr.append(results)
+        return output_arr
 
     def clean_text(self):
         '''
@@ -88,7 +118,7 @@ class W2V(feat.Feature):
         self.model = model
         return model
 
-    def train_build_vectors(self, model_vecs, x_train, x_test):
+    def train_build_vectors(self, model_vecs, x_train, x_test, train_ind, test_ind):
         '''
         loading text, building model and
         :param model_vecs:
@@ -97,15 +127,26 @@ class W2V(feat.Feature):
         :return:
         '''
         self.add_text(model_vecs, x_train, x_test)
-        self.build_model(model_vecs)
-        self.train_feat_vecs = self.build_scale(x_train)
-        self.test_feat_vecs = self.build_scale(x_test)
+        self.clean_text()
+        self.build_model(self.corpus)
+        self.train_feat_vecs = self.build_scale(self.train)
+        self.test_feat_vecs = self.build_scale(self.test)
+
+        if self.build_liwc:
+            liwc_train_vec = self.liwc[train_ind]
+            liwc_test_vec = self.liwc[test_ind]
+
+            assert(len(liwc_test_vec) == len(self.test_feat_vecs))
+            assert(len(liwc_train_vec) == len(self.train_feat_vecs))
+
+            self.train_feat_vecs = np.concatenate((self.train_feat_vecs, liwc_train_vec), axis=1)
+            self.test_feat_vecs = np.concatenate((self.test_feat_vecs, liwc_test_vec), axis=1)
 
         return self.train_feat_vecs, self.test_feat_vecs
 
 if __name__ == "__main__":
     print('a. fetching data')
-    with open('data/anxiety_content.txt', 'r') as infile:
+    with open('data/anxiety_filtered.txt', 'r') as infile:
         dep_posts = infile.readlines()
 
     with open('data/mixed_content.txt', 'r') as infile:
@@ -127,12 +168,10 @@ if __name__ == "__main__":
             new_arr.append(post)
     reg_posts = new_arr
 
-    dep_posts = dep_posts
-    reg_posts = reg_posts
-
     y = np.concatenate((np.ones(len(reg_posts)), np.zeros(len(dep_posts))))
     x = np.concatenate((reg_posts, dep_posts))
-
+    print len(y)
+    print len(x)
     print('b. initializing')
     rs = ShuffleSplit(n_splits=10, test_size=.10, random_state=0)
     rs.get_n_splits(x)
@@ -143,8 +182,17 @@ if __name__ == "__main__":
         x_train, x_test = x[train_index], x[test_index]
         y_train, y_test = y[train_index], y[test_index]
 
-        new_w2v = W2V('w2v_tweet_' + str(split), 300)
-        train_vecs, test_vecs = new_w2v.train_build_vectors(unlabeled_posts, x_train, x_test)
+        new_w2v = W2V('w2v' + str(split), 300, liwc=True)
+
+        new_w2v.load_liwc('data/mixed_content2015.csv', 'data/anxiety_filtered2015.csv')
+        print len(x[0].split(" "))
+        print new_w2v.liwc[0]
+        train_vecs, test_vecs = new_w2v.train_build_vectors(x_train, x_train, x_test, train_index, test_index)
+
+        #trained with twitter corpus vectors
+        #new_w2v = W2V('w2v_twt', 300, liwc=False)
+        #train_vecs, test_vecs = new_w2v.train_build_vectors(unlabeled_posts, x_train, x_test, train_index, test_index)
+
 
         print('Logreg')
         logreg.run_logreg(train_vecs, test_vecs, y_train, y_test)
