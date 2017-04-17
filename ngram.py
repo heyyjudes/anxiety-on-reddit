@@ -79,7 +79,7 @@ class Bigram(feat.Feature):
         '''
         #build unigram freq model here: we need class
         first_token = input_tokens[0]
-        first_prob = float((model.unigram[first_token] + 1)/model.length)
+        first_prob = float((model.unigram[first_token] + 1))/model.length
         unigram_prob = 0
         #convert to log domain to avoid underflow
         if first_prob > 0:
@@ -89,7 +89,7 @@ class Bigram(feat.Feature):
         unigram_prob = total_prob
         for i in range(1, len(input_tokens)):
             temp_prob = model.bi_prob[input_tokens[i-1]].prob(input_tokens[i])
-            temp_prob_uni = float((model.unigram[input_tokens[i]] + 1)/model.length)
+            temp_prob_uni = float(model.unigram[input_tokens[i]])/model.length
             if temp_prob > 0:
                 total_prob += np.log(temp_prob)
             if temp_prob_uni > 0:
@@ -170,7 +170,7 @@ if __name__ == "__main__":
         new_ngram = Bigram('reg')
         print "building corpus"
         pos_corp = build_corp("all_train_set.txt")
-        neg_corp = build_corp("anx_test_set.txt")
+        neg_corp = build_corp("anx_train_set.txt")
 
         new_ngram.build_all_models(pos_corp, neg_corp, unlabeled_corp, brown_corp)
 
