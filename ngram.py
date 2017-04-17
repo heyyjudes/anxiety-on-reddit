@@ -5,6 +5,7 @@ import NNet
 import svm
 import logreg
 from sklearn.model_selection import ShuffleSplit
+from nltk.collocations import *
 
 class GramModel():
     def __init__(self, name):
@@ -34,9 +35,11 @@ class Bigram(feat.Feature):
         :return:
         '''
         pos_model = GramModel('pos')
+        print "pos model"
         self.pos_model = self.build_gram(pos_model, pos_corp)
 
         neg_model = GramModel('neg')
+        print "neg model"
         self.neg_model = self.build_gram(neg_model, neg_corp)
 
         unlabel_model = GramModel('twt')
@@ -55,8 +58,15 @@ class Bigram(feat.Feature):
         model.corp = corp
         model.bi_freq = nltk.ConditionalFreqDist(nltk.bigrams(corp.words()))
         model.bi_prob = nltk.ConditionalProbDist(model.bi_freq, nltk.MLEProbDist)
+        #print nltk.FreqDist(nltk.bigrams(corp.words())).most_common(20)
+        #bigram_measures = nltk.collocations.BigramAssocMeasures()
+        #finder = BigramCollocationFinder.from_words(corp.words())
+        #finder.apply_freq_filter(10)
+        #print finder.nbest(bigram_measures.pmi, 10)
+
         model.unigram = nltk.FreqDist(corp.words())
         model.length = len(corp.words())
+        #print model.unigram.most_common(20)
         return model
 
 
@@ -70,26 +80,31 @@ class Bigram(feat.Feature):
         #build unigram freq model here: we need class
         first_token = input_tokens[0]
         first_prob = float((model.unigram[first_token] + 1)/model.length)
+        unigram_prob = 0
         #convert to log domain to avoid underflow
         if first_prob > 0:
             total_prob = np.log(first_prob)
         else:
             total_prob = 0
+        unigram_prob = total_prob
         for i in range(1, len(input_tokens)):
             temp_prob = model.bi_prob[input_tokens[i-1]].prob(input_tokens[i])
+            temp_prob_uni = float((model.unigram[input_tokens[i]] + 1)/model.length)
             if temp_prob > 0:
                 total_prob += np.log(temp_prob)
-        return total_prob
+            if temp_prob_uni > 0:
+                unigram_prob += np.log(temp_prob_uni)
+        return unigram_prob, total_prob
 
     def build_prob_vecs(self, input_arr):
         feat_arr = []
         for arr in input_arr:
             tokens = arr.split(" ")
-            feat_vec = np.zeros((4,))
-            feat_vec[0] = self.calc_prob(tokens, self.pos_model)
-            feat_vec[1] = self.calc_prob(tokens, self.neg_model)
-            feat_vec[2] = self.calc_prob(tokens, self.unlab_model)
-            feat_vec[3] = self.calc_prob(tokens, self.std_model)
+            feat_vec = np.zeros((8,))
+            feat_vec[0:2] = self.calc_prob(tokens, self.pos_model)
+            feat_vec[2:4] = self.calc_prob(tokens, self.neg_model)
+            feat_vec[4:6] = self.calc_prob(tokens, self.unlab_model)
+            feat_vec[6:8] = self.calc_prob(tokens, self.std_model)
             feat_arr.append(feat_vec)
         return np.asarray(feat_arr)
 
@@ -126,8 +141,10 @@ if __name__ == "__main__":
         if len(post) > 5:
             new_arr.append(post)
     reg_posts = new_arr
+
     y = np.concatenate((np.ones(len(reg_posts)), np.zeros(len(dep_posts))))
     x = np.concatenate((reg_posts, dep_posts))
+
 
     brown_corp = nltk.corpus.brown
     unlabeled_corp = build_corp("unlabeled_tweet.txt")
