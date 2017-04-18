@@ -34,7 +34,7 @@ def simpleNN(train_x, test_x, train_y, test_y, learn_rate, epochs, batch):
     learning_rate = learn_rate
     training_epochs = epochs
     batch_size = batch
-    display_step = 1
+    display_step = 20
 
     new_test_y = np.zeros((len(test_y), 2))
     for i in range(len(test_y)):
@@ -81,7 +81,7 @@ def simpleNN(train_x, test_x, train_y, test_y, learn_rate, epochs, batch):
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
     # Initializing the variables
-    init = tf.initialize_all_variables()
+    init = tf.global_variables_initializer()
 
     # Launch the graph
     with tf.Session() as sess:
@@ -116,11 +116,15 @@ def simpleNN(train_x, test_x, train_y, test_y, learn_rate, epochs, batch):
         # Calculate accuracy
 
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
-        #print("Accuracy:", accuracy.eval({x: test_x, y: new_test_y}))
+        print("Accuracy:", accuracy.eval({x: test_x, y: new_test_y}))
 
         val_accuracy, y_pred = sess.run([accuracy, test_pred], feed_dict={x: test_x, y: new_test_y})
-        print ("validation accuracy:  %.3f", val_accuracy)
+        print ("validation accuracy:", val_accuracy)
         y_true = np.argmax(new_test_y, 1)
-        print("Precision  %.3f", precision_score(y_true, y_pred))
-        print("Recall  %.3f", recall_score(y_true, y_pred))
+        per = precision_score(y_true, y_pred)
+        recall = recall_score(y_true, y_pred)
+        print("Precision", per)
+        print("Recall", recall)
+        return val_accuracy, per, recall
+
 

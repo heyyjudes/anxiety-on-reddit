@@ -7,10 +7,17 @@ def train_svm(x_train, x_test, y_train, y_test):
     clf.fit(x_train, y_train)
     y_test_pred = clf.predict(x_test)
 
+
     print 'Train Accuracy: %.3f' % clf.score(x_train, y_train)
-    print 'Test Accuracy: %.3f'%clf.score(x_test, y_test)
-    print 'Test Percision %.3f' %precision_score(y_test, y_test_pred)
-    print 'Test Recall %.3f' %recall_score(y_test, y_test_pred)
+
+    acc = clf.score(x_test, y_test)
+    per = precision_score(y_test, y_test_pred)
+    recall = recall_score(y_test, y_test_pred)
+    print 'Test Accuracy: %.3f'% acc
+    print 'Test Percision %.3f' % per
+    print 'Test Recall %.3f' % recall
+    return acc, per, recall
+
 
 def run_SVM(x, y):
     print 'SVM: '
