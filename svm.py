@@ -3,7 +3,7 @@ from sklearn.model_selection import ShuffleSplit
 from sklearn.metrics import precision_score, recall_score
 
 def train_svm(x_train, x_test, y_train, y_test):
-    clf = svm.SVC()
+    clf = svm.LinearSVC()
     clf.fit(x_train, y_train)
     y_test_pred = clf.predict(x_test)
 
