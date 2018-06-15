@@ -27,7 +27,7 @@ import numpy as np
 from six.moves import urllib
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
-from pre_process import PreProccessor, PreProccessor_text
+from preprocess import PreProccessor, PreProccessor_text
 
 # Step 1: Download the data.
 # url = 'http://mattmahoney.net/dc/'

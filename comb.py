@@ -1,17 +1,8 @@
-import sys
 import numpy as np
-import gensim
 import NNet
 import svm
 import logreg
-from preprocess import PreProcessorLDA
-from sklearn.preprocessing import scale
-from sklearn.metrics import roc_curve, auc
 from sklearn.model_selection import ShuffleSplit
-import matplotlib.pyplot as plt
-from sklearn.linear_model import SGDClassifier
-from svm import train_svm
-from NNet import simpleNN
 
 print('a. fetching data')
 with open('data/anxiety_filtered.txt', 'r') as infile:

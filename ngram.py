@@ -107,11 +107,11 @@ class Bigram(feat.Feature):
 
         #unigram most common
         pos_corp.unigram = nltk.FreqDist(pos_corp.words())
-        pos_top = pos_corp.unigram.most_common(300)
+        pos_top = pos_corp.unigram.most_common(200)
         pos_top = [x for (x, c) in pos_top]
 
         neg_corp.unigram = nltk.FreqDist(neg_corp.words())
-        neg_top = neg_corp.unigram.most_common(300)
+        neg_top = neg_corp.unigram.most_common(200)
         neg_top = [x for (x, c) in neg_top]
 
         result_file = open(result_text, 'w')
@@ -229,8 +229,8 @@ if __name__ == "__main__":
     x = np.concatenate((reg_posts, dep_posts))
 
     #for analyzing corpus
-    #new_ngram = Bigram('reg')
-    #new_ngram.analysis('anxiety_content.txt', 'mixed_content.txt', 'data/gram_result.txt')
+    new_ngram = Bigram('reg')
+    new_ngram.analysis('anxiety_content.txt', 'mixed_content.txt', 'data/gram_result_new.txt')
 
     brown_corp = nltk.corpus.brown
     unlabeled_corp = build_corp("unlabeled_tweet.txt")
@@ -273,14 +273,14 @@ if __name__ == "__main__":
         np.save('feat/test_bigram' + str(split), test_vecs)
         np.save('feat/train_bigram' + str(split), train_vecs)
 
-        # print('Logreg')
-        # logreg.run_logreg(train_vecs, test_vecs, y_train, y_test)
-        #
-        # print('SVM')
-        # svm.train_svm(train_vecs, test_vecs, y_train, y_test)
-        #
-        # print('Simple NN')
-        # NNet.simpleNN(train_vecs, test_vecs, y_train, y_test, 0.01, 100, 100)
+        print('Logreg')
+        logreg.run_logreg(train_vecs, test_vecs, y_train, y_test)
+
+        print('SVM')
+        svm.train_svm(train_vecs, test_vecs, y_train, y_test)
+
+        print('Simple NN')
+        NNet.simpleNN(train_vecs, test_vecs, y_train, y_test, 0.01, 100, 100)
         split += 1
 
 

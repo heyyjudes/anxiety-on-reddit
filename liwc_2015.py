@@ -29,11 +29,11 @@ def build_train_test(x, y, train_index, test_index):
 
     return x_train, x_test, y_train, y_test
 
-    return
 if __name__ == "__main__":
     labels, anx_liwc= read_liwc_csv('data//anxious_liwc.csv')
     labels, mixed_liwc = read_liwc_csv('data//mixed_liwc.csv')
 
+    print len(anx_liwc)
     y = np.concatenate((np.ones(len(mixed_liwc)), np.zeros(len(anx_liwc))))
     x = np.concatenate((mixed_liwc, anx_liwc))
 

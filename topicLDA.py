@@ -234,11 +234,6 @@ if __name__ == "__main__":
         x_train, x_test = x[train_index], x[test_index]
         y_train, y_test = y[train_index], y[test_index]
 
-        # x_train = x_train[:100]
-        # x_test = x_test[:100]
-        # y_train = y_train[:100]
-        # y_test = y_test[:100]
-
         lda_feat = LDA('twt.lda')
         lda_feat.add_text(x_train, y_train, x_test, corpus=unlabeled_posts)
         lda_feat.prep_model()

@@ -71,8 +71,8 @@ class DeCh(feat.Feature):
         # print "anew percentage", anew_count * 1.0 / total_count
         return avg_aff, avg_dom
 
-    def calculate_lexicon(self, tokens):
-        medfile = open('ref/druglist.txt', 'r')
+    def calculate_lexicon(self, tokens, file_name):
+        medfile = open(file_name, 'r')
         medlist = medfile.readlines()
         medlist = [z.rstrip("\n") for z in medlist]
 
@@ -83,7 +83,7 @@ class DeCh(feat.Feature):
             if word in medlist:
                 med_count += 1
 
-        return med_count/len(tokens)
+        return 1.0*med_count/len(tokens)
 
     def build_feat(self, train_set, train_ind):
         #initializing
@@ -102,8 +102,12 @@ class DeCh(feat.Feature):
             feat.append(dom)
 
             #adding lexicon count
-            med = self.calculate_lexicon(tokens)
+            med = self.calculate_lexicon(tokens, 'ref/druglist.txt')
             feat.append(med)
+
+            #adding anx_lex
+            a_lex = self.calculate_lexicon(tokens, 'ref/anxiety_lex.txt')
+            feat.append(a_lex)
 
             #addliwc
             feat = np.concatenate((feat, liwc[train_ind[i]]))
@@ -150,7 +154,7 @@ if __name__ == "__main__":
         np.save('feat/train_de' + str(split), train_vecs)
 
         print('Simple NN')
-        NNet.simpleNN(train_vecs, test_vecs, y_train, y_test, 0.01, 10, 100)
+        #NNet.simpleNN(train_vecs, test_vecs, y_train, y_test, 0.01, 100, 100)
 
         print('Logreg')
         logreg.run_logreg(train_vecs, test_vecs, y_train, y_test)

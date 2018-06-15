@@ -129,8 +129,12 @@ class W2V(feat.Feature):
         self.add_text(model_vecs, x_train, x_test)
         self.clean_text()
         self.build_model(self.corpus)
+
         self.train_feat_vecs = self.build_scale(self.train)
         self.test_feat_vecs = self.build_scale(self.test)
+
+        #self.train_feat_vecs = self.liwc[train_ind]
+        #self.test_feat_vecs = self.liwc[test_ind]
 
         if self.build_liwc:
             liwc_train_vec = self.liwc[train_ind]
@@ -156,20 +160,13 @@ if __name__ == "__main__":
         unlabeled_posts = infile.readlines()
 
 
-    new_arr = []
-    for post in dep_posts:
-        if len(post) > 5:
-            new_arr.append(post)
-    dep_posts = new_arr
-
-    new_arr = []
-    for post in reg_posts:
-        if len(post) > 5:
-            new_arr.append(post)
-    reg_posts = new_arr
+    #dep_posts= dep_posts[:1000]
+    #reg_posts= reg_posts[:1000]
 
     y = np.concatenate((np.ones(len(reg_posts)), np.zeros(len(dep_posts))))
     x = np.concatenate((reg_posts, dep_posts))
+
+
     print len(y)
     print len(x)
     print('b. initializing')
@@ -184,24 +181,27 @@ if __name__ == "__main__":
 
         new_w2v = W2V('w2v' + str(split), 300, liwc=True)
 
-        new_w2v.load_liwc('data/mixed_content2015.csv', 'data/anxiety_filtered2015.csv')
-        print len(x[0].split(" "))
-        print new_w2v.liwc[0]
+        new_w2v.load_liwc('data/mixed_liwc.csv', 'data/anxious_liwc.csv')
         train_vecs, test_vecs = new_w2v.train_build_vectors(x_train, x_train, x_test, train_index, test_index)
+        print len(train_vecs)
+        print len(test_vecs)
+            #trained with twitter corpus vectors
+            #new_w2v = W2V('w2v_twt', 300, liwc=False)
+            #train_vecs, test_vecs = new_w2v.train_build_vectors(unlabeled_posts, x_train, x_test, train_index, test_index)
 
-        #trained with twitter corpus vectors
-        #new_w2v = W2V('w2v_twt', 300, liwc=False)
-        #train_vecs, test_vecs = new_w2v.train_build_vectors(unlabeled_posts, x_train, x_test, train_index, test_index)
 
+        np.save('feat/test_w2v_liwc' + str(split), test_vecs)
+        np.save('feat/train_w2v_liwc' + str(split), train_vecs)
+        #print('Simple NN')
+        NNet.simpleNN(train_vecs, test_vecs, y_train, y_test, 0.01, 100, 100)
 
         print('Logreg')
         logreg.run_logreg(train_vecs, test_vecs, y_train, y_test)
 
-        print('SVM')
+        #print('SVM')
         svm.train_svm(train_vecs, test_vecs, y_train, y_test)
 
-        print('Simple NN')
-        NNet.simpleNN(train_vecs, test_vecs, y_train, y_test, 0.01, 100, 100)
+
         split += 1
 
 
