@@ -1,11 +1,9 @@
+# NN util
 from __future__ import print_function
-
-
 import tensorflow as tf
 import numpy as np
 
 from sklearn.metrics import precision_score, recall_score
-
 
 # Create model
 def multilayer_perceptron(x, weights, biases):
@@ -46,8 +44,8 @@ def simpleNN(train_x, test_x, train_y, test_y, learn_rate, epochs, batch):
     # Network Parameters
     n_hidden_1 = 256  # 1st layer number of features
     n_hidden_2 = 256  # 2nd layer number of features
-    n_input = n  # MNIST data input (img shape: 28*28)
-    n_classes = 2  # MNIST total classes (0-9 digits)
+    n_input = n
+    n_classes = 2
 
     # tf Graph input
     x = tf.placeholder("float", [None, n_input])
@@ -104,7 +102,6 @@ def simpleNN(train_x, test_x, train_y, test_y, learn_rate, epochs, batch):
         test_label = tf.argmax(y, 1)
         correct_prediction = tf.equal(test_pred, test_label)
         #correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
-        # Calculate accuracy
 
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
         print("Accuracy:", accuracy.eval({x: test_x, y: new_test_y}))

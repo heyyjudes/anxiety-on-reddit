@@ -1,16 +1,15 @@
-import numpy as np
-import gensim
 import os
-
+import feat
+import svm
+import NNet
+import logreg
+import gensim
+import numpy as np
 from sklearn.preprocessing import scale
 from sklearn.model_selection import ShuffleSplit
 from nltk.stem.porter import PorterStemmer
 from stop_words import get_stop_words
 
-import feat
-import svm
-import NNet
-import logreg
 
 class LDA(feat.Feature):
     def __init__(self, name):
@@ -48,6 +47,10 @@ class LDA(feat.Feature):
         return
 
     def clean_text(self):
+        '''
+        remove new lines, lowercase everything and save in self.train and test
+        :return:
+        '''
 
         self.train = [z.lower().replace('\n', '').split() for z in self.train]
         self.test = [z.lower().replace('\n', '').split() for z in self.test]
@@ -60,6 +63,10 @@ class LDA(feat.Feature):
         return
 
     def remove_stop(self):
+        '''
+        remove stop words  and save in corpus
+        :return:
+        '''
         en_stop = get_stop_words('en')
         en_stop.append('just')
         temp = []
@@ -84,7 +91,12 @@ class LDA(feat.Feature):
             self.corpus = self.train
         return
 
+
     def stem_LDA(self):
+        '''
+        stem words for LDA
+        :return: None
+        '''
         p_stemmer = PorterStemmer()
 
         temp = []
@@ -110,6 +122,10 @@ class LDA(feat.Feature):
         return
 
     def doc_term_matrix(self):
+        '''
+        construct document term matrix
+        :return: None
+        '''
         # construct document term matrix
         # assign frequencies
         # case 1: our corpus is just our training examples
@@ -140,6 +156,10 @@ class LDA(feat.Feature):
         return
 
     def prep_model(self):
+        '''
+        prep and create LDA model
+        :return:
+        '''
         model_name = self.name
         print "cleaning"
         self.clean_text()
@@ -167,6 +187,11 @@ class LDA(feat.Feature):
         return
 
     def create_model(self, mod_label):
+        '''
+        create LDA model
+        :param mod_label: model name
+        :return: None
+        '''
         if self.diff_train == False:
             self.model_pos = gensim.models.ldamodel.LdaModel(self.corpus_pos, num_topics=10, id2word=self.dict_pos, passes=20)
             self.model_pos.save('pos_' + mod_label)
@@ -178,7 +203,12 @@ class LDA(feat.Feature):
             self.model.save('uni_' + mod_label)
         return
 
-    def buildWordVector(self, text):
+    def build_post_vector(self, text):
+        '''
+        build vectors of topic probabilities given input text
+        :param text: list of cleaned posts
+        :return: vectors of topic probabilities
+        '''
         size = 10
         # same training as model so we have two spaces
         if self.diff_train == False:
@@ -239,10 +269,10 @@ if __name__ == "__main__":
         lda_feat.prep_model()
 
         print('d. scaling')
-        train_vecs = np.concatenate([lda_feat.buildWordVector(z) for z in lda_feat.train])
+        train_vecs = np.concatenate([lda_feat.build_post_vector(z) for z in lda_feat.train])
         train_vecs = scale(train_vecs)
         # Build test tweet vectors then scale
-        test_vecs = np.concatenate([lda_feat.buildWordVector(z) for z in lda_feat.test])
+        test_vecs = np.concatenate([lda_feat.build_post_vector(z) for z in lda_feat.test])
         test_vecs = scale(test_vecs)
 
         print('e. logistical regression')

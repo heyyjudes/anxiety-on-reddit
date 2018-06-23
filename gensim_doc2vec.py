@@ -1,18 +1,15 @@
 # gensim modules
-from gensim import utils
-from gensim.models.doc2vec import LabeledSentence
-from gensim.models import Doc2Vec
-from sklearn.model_selection import ShuffleSplit
-# numpy
-import numpy as np
-
 import os
-from random import shuffle
-
 import feat
 import svm
 import logreg
 import NNet
+import numpy as np
+from random import shuffle
+from gensim import utils
+from gensim.models.doc2vec import TaggedDocument
+from gensim.models import Doc2Vec
+from sklearn.model_selection import ShuffleSplit
 
 class D2V(feat.Feature):
     def __init__(self, name, dim):
@@ -36,14 +33,9 @@ class D2V(feat.Feature):
                     else:
                         all.write(x_train[i])
 
-        # sources = {'data/anx_test_set.txt': 'TEST_NEG', 'data/all_test_set.txt': 'TEST_POS',
-        #            'data/anx_train_set.txt': 'TRAIN_NEG',
-        #            'data/all_train_set.txt': 'TRAIN_POS', 'data/unlabeled_tweet.txt': 'TRAIN_UNLAB'}
-
         sources_train = {
             'data/anx_train_set.txt': 'TRAIN_NEG',
                    'data/all_train_set.txt': 'TRAIN_POS'}
-            #       'data/unlabeled_tweet.txt': 'TRAIN_UNLAB'}
 
         sources_test = {'data/anx_test_set.txt': 'TEST_NEG', 'data/all_test_set.txt': 'TEST_POS'}
 
@@ -68,25 +60,11 @@ class D2V(feat.Feature):
             print('3. saving model')
             model.save(model_str)
 
-
         train_arrays = []
         for sent in x_train:
             train_arrays.append(model.infer_vector(sent.split(" ")))
         train_arrays = np.asarray(train_arrays)
         train_labels = y_train
-
-        # train_arrays = np.zeros((train_pos_size + train_neg_size, self.dim))
-        # train_labels = np.zeros(train_pos_size + train_neg_size)
-        #
-        # for i in range(0, train_pos_size):
-        #     prefix_train_pos = 'TRAIN_POS_' + str(i)
-        #     train_arrays[i] = model.docvecs[prefix_train_pos]
-        #     train_labels[i] = 1
-        #
-        # for i in range(0, train_neg_size):
-        #     prefix_train_neg = 'TRAIN_NEG_' + str(i)
-        #     train_arrays[train_pos_size + i] = model.docvecs[prefix_train_neg]
-        #     train_labels[train_pos_size + i] = 0
 
         test_arrays = []
         for sent in x_test:
@@ -94,52 +72,36 @@ class D2V(feat.Feature):
         test_arrays = np.asarray(test_arrays)
         test_labels = y_test
 
-        # test_arrays = np.zeros((test_pos_size + test_neg_size, self.dim))
-        # test_labels = np.zeros(test_pos_size + test_neg_size)
-        #
-        # for i in range(0, test_pos_size):
-        #     prefix_test_pos = 'TEST_POS_' + str(i)
-        #     test_arrays[i] = model.docvecs[prefix_test_pos]
-        #     test_labels[i] = 1
-        #
-        # for i in range(0, test_neg_size):
-        #     prefix_test_neg = 'TEST_NEG_' + str(i)
-        #     test_arrays[test_pos_size + i] = model.docvecs[prefix_test_neg]
-        #     test_labels[test_pos_size + i] = 0
-
-
-
         return train_arrays, test_arrays, train_labels, test_labels
 
 class LabeledLineSentence(object):
+    '''
+    Sentence object from gensim.TaggedDocument type
+    '''
     def __init__(self, sources):
         self.sources = sources
         self.train_neg_size = 0
         self.train_pos_size = 0
         self.test_pos_size = 0
         self.test_neg_size = 0
-
         flipped = {}
 
-        # make sure that keys are unique
         for key, value in sources.items():
             if value not in flipped:
                 flipped[value] = [key]
-            else:
-                raise Exception('Non-unique prefix encountered')
 
     def __iter__(self):
         for source, prefix in self.sources.items():
             with utils.smart_open(source) as fin:
                 for item_no, line in enumerate(fin):
-                    yield LabeledSentence(utils.to_unicode(line).split(), [prefix + '_%s' % item_no])
+                    yield TaggedDocument(utils.to_unicode(line).split(), [prefix + '_%s' % item_no])
 
     def to_array(self):
         self.sentences = []
         for source, prefix in self.sources.items():
             with utils.smart_open(source) as fin:
                 for item_no, line in enumerate(fin):
-                    self.sentences.append(LabeledSentence(utils.to_unicode(line).split(), [prefix + '_%s' % item_no]))
+                    self.sentences.append(TaggedDocument(utils.to_unicode(line).split(), [prefix + '_%s' % item_no]))
                     if prefix =='TRAIN_NEG':
                         self.train_neg_size += 1
                     if prefix == 'TRAIN_POS':
@@ -165,7 +127,7 @@ if __name__ == "__main__":
     with open('data/anxiety_content.txt', 'r') as infile:
         dep_posts = infile.readlines()
 
-    with open('data/mixed_content.txt', 'r') as infile:
+    with open('data/control_content.txt', 'r') as infile:
         reg_posts = infile.readlines()
 
     with open('data/unlabeled_tweet.txt', 'r') as infile:

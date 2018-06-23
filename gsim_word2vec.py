@@ -10,7 +10,6 @@ from sklearn.preprocessing import scale
 from sklearn.model_selection import ShuffleSplit
 
 class W2V(feat.Feature):
-
     def __init__(self, name, dim, liwc):
         self.train = []
         self.test = []
@@ -133,9 +132,6 @@ class W2V(feat.Feature):
         self.train_feat_vecs = self.build_scale(self.train)
         self.test_feat_vecs = self.build_scale(self.test)
 
-        #self.train_feat_vecs = self.liwc[train_ind]
-        #self.test_feat_vecs = self.liwc[test_ind]
-
         if self.build_liwc:
             liwc_train_vec = self.liwc[train_ind]
             liwc_test_vec = self.liwc[test_ind]
@@ -153,19 +149,14 @@ if __name__ == "__main__":
     with open('data/anxiety_filtered.txt', 'r') as infile:
         dep_posts = infile.readlines()
 
-    with open('data/mixed_content.txt', 'r') as infile:
+    with open('data/control_filtered.txt', 'r') as infile:
         reg_posts = infile.readlines()
 
     with open('data/unlabeled_tweet.txt', 'r') as infile:
         unlabeled_posts = infile.readlines()
 
-
-    #dep_posts= dep_posts[:1000]
-    #reg_posts= reg_posts[:1000]
-
     y = np.concatenate((np.ones(len(reg_posts)), np.zeros(len(dep_posts))))
     x = np.concatenate((reg_posts, dep_posts))
-
 
     print len(y)
     print len(x)
@@ -185,22 +176,20 @@ if __name__ == "__main__":
         train_vecs, test_vecs = new_w2v.train_build_vectors(x_train, x_train, x_test, train_index, test_index)
         print len(train_vecs)
         print len(test_vecs)
-            #trained with twitter corpus vectors
-            #new_w2v = W2V('w2v_twt', 300, liwc=False)
-            #train_vecs, test_vecs = new_w2v.train_build_vectors(unlabeled_posts, x_train, x_test, train_index, test_index)
-
+        #trained with twitter corpus vectors
+        #new_w2v = W2V('w2v_twt', 300, liwc=False)
+        #train_vecs, test_vecs = new_w2v.train_build_vectors(unlabeled_posts, x_train, x_test, train_index, test_index)
 
         np.save('feat/test_w2v_liwc' + str(split), test_vecs)
         np.save('feat/train_w2v_liwc' + str(split), train_vecs)
-        #print('Simple NN')
+        print('Simple NN')
         NNet.simpleNN(train_vecs, test_vecs, y_train, y_test, 0.01, 100, 100)
 
         print('Logreg')
         logreg.run_logreg(train_vecs, test_vecs, y_train, y_test)
 
-        #print('SVM')
+        print('SVM')
         svm.train_svm(train_vecs, test_vecs, y_train, y_test)
-
 
         split += 1
 

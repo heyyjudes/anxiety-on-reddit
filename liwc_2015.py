@@ -1,3 +1,4 @@
+#script for LIWC features
 import numpy as np
 import csv
 from svm import train_svm

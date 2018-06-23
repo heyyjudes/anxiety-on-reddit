@@ -65,7 +65,6 @@ class Bigram(feat.Feature):
 
         return model
 
-
     def calc_prob(self, input_tokens, model):
         '''
         use conditional prob dist model to calculate probability tokens
@@ -100,8 +99,14 @@ class Bigram(feat.Feature):
             feat_arr.append(feat_vec)
         return np.asarray(feat_arr)
 
-
     def analysis(self, pos_text, neg_text, result_text):
+        '''
+        analyze bigrams, trigrams and collocations (script)
+        :param pos_text: list of positive class posts
+        :param neg_text: list of control class posts
+        :param result_text: path to result file
+        :return: None
+        '''
         pos_corp = build_corp(pos_text)
         neg_corp = build_corp(neg_text)
 
@@ -199,12 +204,6 @@ class Bigram(feat.Feature):
                 result_file.write(str(t))
                 result_file.write("\n")
 
-
-
-
-
-
-
 def build_corp(file_name):
     '''
     return corpus from file using nltk Plain text corpus reader
@@ -219,7 +218,7 @@ if __name__ == "__main__":
     with open('data/anxiety_filtered.txt', 'r') as infile:
         dep_posts = infile.readlines()
 
-    with open('data/mixed_content.txt', 'r') as infile:
+    with open('data/control_filtered.txt', 'r') as infile:
         reg_posts = infile.readlines()
 
     with open('data/unlabeled_tweet.txt', 'r') as infile:

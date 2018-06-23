@@ -1,3 +1,5 @@
+# script for combining features
+# must first generate individual features
 import numpy as np
 import NNet
 import svm
@@ -8,12 +10,11 @@ print('a. fetching data')
 with open('data/anxiety_filtered.txt', 'r') as infile:
     dep_posts = infile.readlines()
 
-with open('data/mixed_content.txt', 'r') as infile:
+with open('data/control_filtered.txt', 'r') as infile:
     reg_posts = infile.readlines()
 
 y = np.concatenate((np.ones(len(reg_posts)), np.zeros(len(dep_posts))))
 x = np.concatenate((reg_posts, dep_posts))
-
 
 rs = ShuffleSplit(n_splits=10, test_size=.20, random_state=0)
 rs.get_n_splits(x)
@@ -27,10 +28,8 @@ for train_index, test_index in rs.split(x):
     x_train, x_test = x[train_index], x[test_index]
     y_train, y_test = y[train_index], y[test_index]
 
-
     test_vecs_w = np.load('feat/test_w2v' + str(split) + '.npy')
     train_vecs_w = np.load('feat/train_w2v' + str(split) + '.npy')
-
 
     test_vecs_c = np.load('feat/test_liwc' + str(split) + '.npy')
     train_vecs_c = np.load('feat/train_liwc' + str(split) + '.npy')
@@ -68,5 +67,3 @@ for train_index, test_index in rs.split(x):
     results[split][8] = rec
 
     split += 1
-
-print results

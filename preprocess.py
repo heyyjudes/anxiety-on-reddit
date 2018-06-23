@@ -1,11 +1,11 @@
 #this file will handle the pre-processing after scraping data from Reddit
-import nltk
 import csv
 import message
 import re
 import os
 from stop_words import get_stop_words
 from nltk.tokenize import RegexpTokenizer, WhitespaceTokenizer
+
 POST_KEYS = ['title','created_utc','score','subreddit','domain','is_self','over_18','selftext']
 contractions = {
     "ain't": "am not",
@@ -119,7 +119,7 @@ contractions = {
 }
 
 class PreProccessor:
-    """ class for pre processing"""
+    """ class for pre processing from csv """
     def __init__(self, input_csv):
         self.input_file = input_csv
         self.message_arr = []
@@ -137,45 +137,38 @@ class PreProccessor:
                 self.message_arr.append(new_message)
                 combined_post = new_message.title + " " + new_message.body
                 self.texts.append(combined_post)
-                # self.texts.append(new_message.body)
-                # self.texts.append(new_message.title)
                 id += 1
             print "Total posts", id
 
     def filter_message(self):
+        '''
+        filter by length and save in self.message_arr
+        :return: None
+        '''
         #filter by length
         new_arr = []
         for Rmsg in self.message_arr:
             if len(Rmsg.body) > 60:
                 new_arr.append(Rmsg)
-            # else:
-            #     print "too short"
-            #     print Rmsg.body
+            else:
+                print "too short"
+                print Rmsg.body
         self.message_arr = new_arr
-
-    def build_dictionary(self):
-        for message in self.message_arr:
-            for word in message.body:
-                print
-        from collections import defaultdict
-        frequency = defaultdict(int)
-
-        # here we want to build a dictionary of words
         return
 
     def tokenize(self):
+        '''
+        tokenize, filter numbers and remove links and save in self.to_write
+        :return:
+        '''
         print("Tokenizing")
         tokenizer2 = RegexpTokenizer(r'\w+')
         tokenizer1 = WhitespaceTokenizer()
         tokens = []
         for i in range(len(self.texts)):
             raw = self.texts[i].lower()
-            #print('raw txt')
-            #print(raw)
-
             # white space tokenize
             token = tokenizer1.tokenize(raw)
-
             # extending contractions
             for i in range(0, len(token)):
                 if token[i] in contractions.keys():
@@ -200,44 +193,11 @@ class PreProccessor:
             self.to_write.append(raw)
         return tokens
 
-    def tokenize_txt(self):
-        print("Tokenizing")
-        tokenizer = RegexpTokenizer(r'\w+')
-        tokens = []
-        for i in range(len(self.texts)):
-            raw = self.texts[i].lower()
-            # print('raw txt')
-            # print(raw)
-
-            # white space tokenize
-            token = tokenizer1.tokenize(raw)
-
-            # extending contractions
-            for i in range(0, len(token)):
-                if token[i] in contractions.keys():
-                    token[i] = contractions[str(token[i])]
-                # removing links
-                if (re.search('http', token[i])):
-                    token[i] = ''
-
-            raw = " ".join(token)
-            # regex tokenizing
-            token = tokenizer2.tokenize(raw)
-            for i in range(0, len(token)):
-                if token[i].isalnum() == False:
-                    token[i] = ''
-                if (token[i] not in self.unique_words):
-                    self.vocab_size += 1
-                    self.unique_words.append(token[i])
-                self.words.append(token[i])
-
-            tokens.append(token)
-            raw = " ".join(token)
-            self.to_write.append(raw)
-        return tokens
-
-
     def remove_stop(tokens):
+        '''
+        remove stop words in tokens
+        :return: filtered by stop words
+        '''
         print("removing stops")
         en_stop = get_stop_words('en')
         en_stop.append('just')
@@ -247,9 +207,14 @@ class PreProccessor:
             stopped_tokens.append(s_token)
         return stopped_tokens
 
-    def save_txt(self, str):
+    def save_text(self, save_str):
+        '''
+        save text in self.to_write in save_str
+        :param save_str: name of file to save
+        :return: None
+        '''
         print('Writing file')
-        txt_str = str + '.txt'
+        txt_str = save_str + '.txt'
         if(os.path.isfile(txt_str)):
             with open (txt_str, 'a') as f:
                 for token in self.to_write:
@@ -264,8 +229,7 @@ class PreProccessor:
         f.close()
 
 class PreProccessor_text:
-    """ class for pre processing"""
-
+    """ class for pre processing from text file"""
     def __init__(self, input_txt):
         self.input_file = input_txt
         self.texts = []
@@ -277,7 +241,11 @@ class PreProccessor_text:
         for m in messages:
             self.texts.append(m)
 
-    def tokenize_txt(self):
+    def tokenize_text(self):
+        '''
+        tokenize, filter numbers and remove links and save in words
+        :return: tokenized posts
+        '''
         print("Tokenizing")
         tokenizer = RegexpTokenizer(r'\w+')
         tokens = []
@@ -297,9 +265,13 @@ class PreProccessor_text:
         return tokens
 
     def train_test_split(self, text_size):
+        '''
+        split posts into training and test set
+        :param text_size: length of average text
+        :return: None
+        '''
         length = len(self.texts)
         cutoff = int(length*text_size)
-
         test_str = 'test_set.txt'
         with open(test_str, 'w') as f:
             for i in range(0, cutoff):
@@ -311,7 +283,6 @@ class PreProccessor_text:
                     print('empty')
                     print(len(self.texts[i]))
                     print(self.texts[i])
-
         f.close()
 
         train_str = 'train_set.txt'
@@ -323,11 +294,17 @@ class PreProccessor_text:
                     print('empty')
                     print(len(self.texts[i]))
                     print(self.texts[i])
-
         f.close()
 
+
 def merge_csv(input_csv1, input_csv2):
-    ids=[]
+    '''
+    merge two csv files
+    :param input_csv1: first csv file
+    :param input_csv2: second csv file
+    :return: None
+    '''
+    ids = []
     added = 0
     with open(input_csv1, 'r+') as csvfile1:
         reader = csv.DictReader(csvfile1)
@@ -345,13 +322,11 @@ def merge_csv(input_csv1, input_csv2):
                 else:
                     print "match"
 
-
-
 if __name__ == "__main__":
     #mixed files
     newProcess = PreProccessor('data/reddit_frugal+youshouldknow+nostupidquestions_.csv')
     newProcess.tokenize()
-    newProcess.save_txt('data/mixed_content')
+    newProcess.save_text('data/mixed_content')
 
 
 
